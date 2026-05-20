@@ -25,6 +25,24 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
+### データベースの初期化（初回のみ）
+
+```bash
+cd backend
+
+# 1. Prisma クライアントを生成
+npx prisma generate
+
+# 2. .env ファイルを作成
+echo DATABASE_URL="file:./dev.db" > .env
+
+# 3. マイグレーションを適用して dev.db を作成
+npx prisma migrate deploy
+```
+
+> **注意:** `src/generated/prisma/` が存在しない場合や `dev.db` がない場合は上記を実行してください。  
+> `Cannot find module '../generated/prisma/client'` というエラーが出た場合は `npx prisma generate` の実行忘れが原因です。
+
 ---
 
 ## 起動方法

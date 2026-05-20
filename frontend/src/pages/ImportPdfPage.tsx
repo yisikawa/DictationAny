@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importsApi } from '../features/imports/api';
 import type { ImportPreviewResponse } from '../types';
@@ -9,7 +9,6 @@ type Step = 'upload' | 'preview';
 
 export default function ImportPdfPage() {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('en-US');
@@ -83,7 +82,6 @@ export default function ImportPdfPage() {
             <label>PDFファイル *</label>
             <div
               className={`${pdfStyles.dropZone} ${dragging ? pdfStyles.dragging : ''} ${file ? pdfStyles.hasFile : ''}`}
-              onClick={() => fileInputRef.current?.click()}
               onDragOver={e => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
@@ -94,7 +92,6 @@ export default function ImportPdfPage() {
                 <span className={pdfStyles.dropHint}>クリックまたはドラッグ&ドロップでPDFを選択</span>
               )}
               <input
-                ref={fileInputRef}
                 type="file"
                 accept="application/pdf"
                 className={pdfStyles.fileInput}

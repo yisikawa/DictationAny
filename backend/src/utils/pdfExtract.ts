@@ -1,5 +1,6 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+const _pdfMod = require('pdf-parse');
+const pdfParse: (buf: Buffer) => Promise<{ text: string }> = _pdfMod.default ?? _pdfMod;
 import type { ImportSegment } from '../types';
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {

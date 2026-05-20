@@ -132,7 +132,7 @@ export default function PracticePage() {
       lang: material!.language,
       onInterim: (text) => { setInterim(text); },
       onFinal: (text) => {
-        setInput(prev => prev ? `${prev} ${text}` : text);
+        setInput(prev => prev ? `${prev}\n${text}` : text);
         setInterim('');
       },
       onSoundStart: () => setSoundDetected(true),

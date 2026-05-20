@@ -17,6 +17,22 @@
   font-size: 0.875rem;
 }
 
+.labelRow { display: flex; align-items: center; justify-content: space-between; }
+
+.btnFix {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.btnFix:hover { background: var(--color-border); }
+
+.fixSuccess { font-size: 0.8125rem; color: #15803d; margin: 0; }
+.fixNone    { font-size: 0.8125rem; color: var(--color-text-sub); margin: 0; }
+
 .footer { margin-top: 0.5rem; }
 
 .btnSubmit {

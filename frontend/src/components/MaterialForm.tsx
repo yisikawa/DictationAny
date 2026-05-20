@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Material } from '../types';
+import { fixDuplicateWords, countDuplicates } from '../utils/fixDuplicateWords';
 import styles from './MaterialForm.module.css';
 
 export interface MaterialFormValues {
@@ -28,6 +29,14 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fixedCount, setFixedCount] = useState<number | null>(null);
+
+  function handleFixDuplicates() {
+    const count = countDuplicates(values.body);
+    const fixed = fixDuplicateWords(values.body);
+    setValues(v => ({ ...v, body: fixed }));
+    setFixedCount(count);
+  }
 
   function set(key: keyof MaterialFormValues) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -55,8 +64,18 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
         <input value={values.title} onChange={set('title')} required maxLength={120} />
       </div>
       <div className={styles.field}>
-        <label>本文 *</label>
-        <textarea value={values.body} onChange={set('body')} required rows={8} />
+        <div className={styles.labelRow}>
+          <label>本文 *</label>
+          <button type="button" className={styles.btnFix} onClick={handleFixDuplicates}>
+            重複単語を修正
+          </button>
+        </div>
+        {fixedCount !== null && (
+          <p className={fixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
+            {fixedCount > 0 ? `${fixedCount} 件の重複単語を修正しました` : '重複単語はありませんでした'}
+          </p>
+        )}
+        <textarea value={values.body} onChange={e => { setFixedCount(null); set('body')(e); }} required rows={8} />
       </div>
       <div className={styles.row}>
         <div className={styles.field}>

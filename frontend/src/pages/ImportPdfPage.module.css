@@ -1,0 +1,25 @@
+.dropZone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--color-surface);
+  position: relative;
+}
+.dropZone:hover { border-color: var(--color-primary); }
+.dragging { border-color: var(--color-primary); background: #eff6ff; }
+.hasFile { border-style: solid; border-color: var(--color-primary); }
+
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.dropHint { font-size: 0.875rem; color: var(--color-text-muted); }
+.fileName { font-size: 0.9375rem; font-weight: 500; color: var(--color-text); }

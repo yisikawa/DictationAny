@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Material {
+  id             String            @id @default(cuid())
+  title          String
+  body           String
+  language       String
+  difficulty     String?
+  tags           String?
+  sourceType     String            @default("manual")
+  sourceUrl      String?
+  sourceMetadata String?
+  segments       MaterialSegment[]
+  attempts       Attempt[]
+  importJob      ImportJob?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model MaterialSegment {
+  id          String   @id @default(cuid())
+  materialId  String
+  material    Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  startTimeMs Int?
+  endTimeMs   Int?
+  text        String
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+}
+
+model ImportJob {
+  id           String    @id @default(cuid())
+  sourceType   String
+  sourceUrl    String?
+  title        String?
+  language     String
+  status       String
+  rawText      String?
+  parsedJson   String?
+  errorMessage String?
+  materialId   String?   @unique
+  material     Material? @relation(fields: [materialId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Attempt {
+  id                String   @id @default(cuid())
+  materialId        String
+  material          Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  submittedText     String
+  score             Int
+  wordAccuracy      Int
+  characterAccuracy Int
+  resultJson        String
+  createdAt         DateTime @default(now())
+}

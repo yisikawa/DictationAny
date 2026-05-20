@@ -1,0 +1,18 @@
+.wrap {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.message { color: #991b1b; font-size: 0.875rem; }
+
+.btn {
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}

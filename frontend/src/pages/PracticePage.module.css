@@ -41,3 +41,102 @@
   padding: 0.625rem 1.5rem; font-size: 0.9375rem; align-self: flex-start;
 }
 .btnSubmit:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+.inputHeader {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.micArea {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+
+.soundOff {
+  font-size: 0.75rem; color: var(--color-text-muted);
+}
+
+.soundOn {
+  font-size: 0.75rem; color: #16a34a; font-weight: 500;
+}
+
+.btnMic {
+  padding: 0.25rem 0.75rem; font-size: 0.8125rem; font-weight: 500;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius); color: var(--color-text);
+}
+.btnMic:hover { background: var(--color-border); }
+
+.btnMicActive {
+  padding: 0.25rem 0.75rem; font-size: 0.8125rem; font-weight: 500;
+  background: #fef2f2; border: 1px solid #fca5a5;
+  border-radius: var(--radius); color: #dc2626;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.interim {
+  font-size: 0.875rem; color: var(--color-text-muted); font-style: italic;
+  padding: 0.375rem 0.75rem; background: var(--color-surface);
+  border: 1px dashed var(--color-border); border-radius: var(--radius);
+}
+
+.micErrorMsg {
+  font-size: 0.875rem; color: #b45309;
+  background: #fffbeb; border: 1px solid #fcd34d;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius);
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+
+.micHint {
+  font-size: 0.8125rem; color: #92400e;
+}
+
+.micFixSteps {
+  margin: 0.25rem 0 0 1.1rem; padding: 0;
+  font-size: 0.8125rem; color: #92400e; line-height: 1.8;
+}
+
+.micTestPanel {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.micTestHeader {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+}
+
+.deviceSelect {
+  flex: 1; min-width: 0; font-size: 0.8125rem;
+  padding: 0.25rem 0.5rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius); background: var(--color-bg);
+}
+
+.micMeterWrap {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.micMeterLabel {
+  font-size: 0.75rem; color: var(--color-text-muted); font-weight: 500;
+}
+
+.micMeter {
+  height: 16px; background: var(--color-border); border-radius: 4px; overflow: hidden;
+}
+
+.micMeterBar {
+  height: 100%; background: #22c55e; border-radius: 4px;
+  transition: width 0.08s ease-out;
+}
+
+.micMeterBarZero {
+  height: 100%; background: #ef4444; border-radius: 4px;
+  width: 4px !important;
+}

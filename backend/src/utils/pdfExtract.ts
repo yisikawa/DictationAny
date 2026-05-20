@@ -1,6 +1,5 @@
-// pdf-parse の index.js は require 時にテストファイルを読もうとするため内部パスを使う
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (buf: Buffer) => Promise<{ text: string }>;
+const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
 import type { ImportSegment } from '../types';
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {

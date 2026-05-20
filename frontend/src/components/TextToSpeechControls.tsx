@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { speakSentences, speak, pause, resume, stop, splitToSentences, isSupported } from '../features/practice/speech';
 import styles from './TextToSpeechControls.module.css';
 
@@ -14,8 +14,10 @@ type State = 'idle' | 'playing' | 'paused';
 export default function TextToSpeechControls({ text, lang }: Props) {
   const [state, setState] = useState<State>('idle');
   const [rate, setRate] = useState(1.0);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const supported = isSupported();
   const sentences = splitToSentences(text);
+  const sentenceRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     return () => stop();
@@ -31,8 +33,11 @@ export default function TextToSpeechControls({ text, lang }: Props) {
     speakSentences(sentences, {
       lang,
       rate,
-      onEnd: () => setState('idle'),
-      onError: () => setState('idle'),
+      onEnd: () => { setState('idle'); setCurrentIndex(-1); },
+      onError: () => { setState('idle'); setCurrentIndex(-1); },
+    }, (i) => {
+      setCurrentIndex(i);
+      sentenceRefs.current[i]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
   }
 
@@ -44,6 +49,7 @@ export default function TextToSpeechControls({ text, lang }: Props) {
   function handleStop() {
     stop();
     setState('idle');
+    setCurrentIndex(-1);
   }
 
   function handleReplay() {
@@ -52,8 +58,11 @@ export default function TextToSpeechControls({ text, lang }: Props) {
     speakSentences(sentences, {
       lang,
       rate,
-      onEnd: () => setState('idle'),
-      onError: () => setState('idle'),
+      onEnd: () => { setState('idle'); setCurrentIndex(-1); },
+      onError: () => { setState('idle'); setCurrentIndex(-1); },
+    }, (i) => {
+      setCurrentIndex(i);
+      sentenceRefs.current[i]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
   }
 
@@ -101,7 +110,12 @@ export default function TextToSpeechControls({ text, lang }: Props) {
       {sentences.length > 1 && (
         <div className={styles.sentences}>
           {sentences.map((s, i) => (
-            <button key={i} className={styles.sentence} onClick={() => handlePlaySentence(i)}>
+            <button
+              key={i}
+              ref={el => { sentenceRefs.current[i] = el; }}
+              className={i === currentIndex ? styles.sentenceActive : styles.sentence}
+              onClick={() => handlePlaySentence(i)}
+            >
               ▷ {s}
             </button>
           ))}

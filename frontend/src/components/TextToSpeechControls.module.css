@@ -63,4 +63,13 @@
 }
 .sentence:hover { background: #f3f4f6; }
 
+.sentenceActive {
+  text-align: left;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
 .unsupported { color: var(--color-text-muted); font-size: 0.875rem; }

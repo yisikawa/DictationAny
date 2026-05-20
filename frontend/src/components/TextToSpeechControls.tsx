@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { speak, pause, resume, stop, splitToSentences, isSupported } from '../features/practice/speech';
+import { speakSentences, speak, pause, resume, stop, splitToSentences, isSupported } from '../features/practice/speech';
 import styles from './TextToSpeechControls.module.css';
 
 const RATES = [0.5, 0.75, 1.0, 1.25];
@@ -15,6 +15,7 @@ export default function TextToSpeechControls({ text, lang }: Props) {
   const [state, setState] = useState<State>('idle');
   const [rate, setRate] = useState(1.0);
   const supported = isSupported();
+  const sentences = splitToSentences(text);
 
   useEffect(() => {
     return () => stop();
@@ -27,7 +28,7 @@ export default function TextToSpeechControls({ text, lang }: Props) {
       return;
     }
     setState('playing');
-    speak(text, {
+    speakSentences(sentences, {
       lang,
       rate,
       onEnd: () => setState('idle'),
@@ -48,15 +49,13 @@ export default function TextToSpeechControls({ text, lang }: Props) {
   function handleReplay() {
     stop();
     setState('playing');
-    speak(text, {
+    speakSentences(sentences, {
       lang,
       rate,
       onEnd: () => setState('idle'),
       onError: () => setState('idle'),
     });
   }
-
-  const sentences = splitToSentences(text);
 
   function handlePlaySentence(i: number) {
     stop();

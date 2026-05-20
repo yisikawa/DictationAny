@@ -22,7 +22,8 @@ export function speak(text: string, options: SpeechOptions): void {
   if (options.onError) utter.onerror = options.onError;
 
   current = utter;
-  window.speechSynthesis.speak(utter);
+  // Chrome では cancel() 直後の speak() がサイレントに失敗するため1tick遅らせる
+  setTimeout(() => window.speechSynthesis.speak(utter), 50);
 }
 
 export function pause(): void {
@@ -56,22 +57,33 @@ export function speakSentences(
   let index = 0;
 
   function next() {
-    if (index >= sentences.length) return;
+    if (index >= sentences.length) {
+      options.onEnd?.();
+      return;
+    }
     if (onSentenceStart) onSentenceStart(index);
-    speak(sentences[index], {
-      ...options,
-      onEnd: () => {
-        index++;
-        if (index < sentences.length) {
-          setTimeout(next, 400);
-        } else {
-          options.onEnd?.();
-        }
-      },
-    });
+
+    const utter = new SpeechSynthesisUtterance(sentences[index]);
+    utter.lang = options.lang;
+    utter.rate = options.rate;
+    utter.onend = () => {
+      if (current !== utter) return; // stop() が外部から呼ばれた場合は連鎖を止める
+      index++;
+      setTimeout(next, 400);
+    };
+    utter.onerror = (e) => {
+      // cancel/interrupted はユーザー操作由来なのでエラー扱いしない
+      if (e.error !== 'canceled' && e.error !== 'interrupted') {
+        options.onError?.(e);
+      }
+    };
+
+    current = utter;
+    window.speechSynthesis.speak(utter);
   }
 
-  next();
+  // Chrome では cancel() 直後に speak() を呼ぶとサイレントに失敗するため1tick遅らせる
+  setTimeout(next, 50);
 }
 
 export function splitToSentences(text: string): string[] {

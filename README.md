@@ -45,6 +45,51 @@ npx prisma migrate deploy
 
 ---
 
+## iPhone / iPad からアクセスする（ローカルネットワーク）
+
+音声入力には HTTPS が必要です。同一 Wi-Fi 内の iPhone / iPad から使うには、**mkcert** でローカル信頼済み証明書を発行し、ルート CA を端末にインストールします。
+
+### 1. mkcert をインストール（初回のみ）
+
+```powershell
+winget install FiloSottile.mkcert
+```
+
+インストール後、**ターミナルを再起動**してから以下を実行します。
+
+```powershell
+mkcert -install
+```
+
+### 2. iPhone に CA 証明書をインストール（初回のみ）
+
+CA ファイルの場所を確認します。
+
+```powershell
+mkcert -CAROOT
+# 例: C:\Users\yourname\AppData\Local\mkcert
+```
+
+表示されたフォルダ内の `rootCA.pem` を iPhone に転送します（メール・LINE・iCloud Drive など）。
+
+iPhone での操作：
+
+1. 転送したファイルを開く →「プロファイルがダウンロードされました」と表示
+2. **設定 → 一般 → VPN とデバイス管理** → ダウンロード済みプロファイル → インストール
+3. **設定 → 一般 → 情報 → 証明書信頼設定** → `mkcert ...` のスイッチをオン
+
+### 3. アクセス
+
+PC の IP アドレスを確認して Safari でアクセスします。
+
+```
+https://<PCのIPアドレス>:5173
+```
+
+> **注意:** iPhone Chrome / Firefox では音声入力の Web Speech API が利用できません。**Safari** をご利用ください。
+
+---
+
 ## 起動方法
 
 ### バッチファイルで起動（Windows）
@@ -117,7 +162,7 @@ npm run dev
    - **再生速度**: 0.5x / 0.75x / 1.0x / 1.25x から選択
    - **文単位再生**: 各文の「▷」ボタンで 1 文だけ再生
 3. 聞き取った内容をテキストエリアに入力、またはマイク入力を使用
-   - **🎤 録音** ボタンを押してマイクに向かって話すと、音声がテキストに自動変換される（Chrome / Edge 対応）
+   - **🎤 録音** ボタンを押してマイクに向かって話すと、音声がテキストに自動変換される（PC: Chrome / Edge、iPhone: Safari）
    - 文が確定するたびに改行区切りで追記される
    - **🔍 マイクテスト** ボタンでマイクの音量レベルを確認できる
 4. **表示モード**の切り替え
@@ -190,5 +235,5 @@ DictationAny/
 | バックエンド | Node.js / Express / TypeScript |
 | データベース | SQLite（Prisma 7） |
 | 音声読み上げ | Web Speech API (SpeechSynthesis) |
-| 音声入力 | Web Speech API (SpeechRecognition) — Chrome / Edge |
+| 音声入力 | Web Speech API (SpeechRecognition) — Chrome / Edge / iOS Safari |
 | 比較アルゴリズム | LCS diff + Levenshtein 距離 |

@@ -14,10 +14,19 @@ function getCtor(): typeof SpeechRecognition | undefined {
   return window.SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 }
 
+// iOS の Chrome/Firefox では webkitSpeechRecognition は存在するが service-not-allowed になる
+function isIOSNonSafari(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (!/iPad|iPhone|iPod/.test(ua)) return false;
+  return /CriOS|FxiOS|OPiOS/.test(ua);
+}
+
 let current: SpeechRecognition | null = null;
 let currentStream: MediaStream | null = null;
 
 export function isSupported(): boolean {
+  if (isIOSNonSafari()) return false;
   return !!getCtor() && !!navigator.mediaDevices;
 }
 

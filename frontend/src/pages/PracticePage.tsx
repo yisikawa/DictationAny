@@ -17,6 +17,7 @@ const MIC_ERROR_MESSAGES: Record<string, string> = {
   'network': 'ネットワークエラー。Chromeの音声認識はインターネット接続が必要です。',
   'not-allowed': 'マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。',
   'audio-capture': 'マイクが見つかりません。接続を確認してください。',
+  'service-not-allowed': 'このブラウザでは音声認識を利用できません。iPhoneの場合はSafariをご利用ください。',
 };
 
 export default function PracticePage() {

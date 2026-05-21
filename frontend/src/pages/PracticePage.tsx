@@ -12,6 +12,26 @@ import styles from './PracticePage.module.css';
 
 type DisplayMode = 'practice' | 'blind';
 
+function appendRecognizedText(prev: string, next: string): string {
+  const text = next.trim();
+  if (!text) return prev;
+  if (!prev.trim()) return text;
+
+  const lines = prev.split('\n');
+  const last = lines[lines.length - 1]?.trim() ?? '';
+  const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
+  const lastNorm = normalize(last);
+  const textNorm = normalize(text);
+
+  if (lastNorm === textNorm || lastNorm.startsWith(textNorm)) return prev;
+  if (textNorm.startsWith(lastNorm)) {
+    lines[lines.length - 1] = text;
+    return lines.join('\n');
+  }
+
+  return `${prev}\n${text}`;
+}
+
 const MIC_ERROR_MESSAGES: Record<string, string> = {
   'no-speech': '音声が検知できませんでした。下の「マイクテスト」で音量を確認してください。',
   'network': 'ネットワークエラー。Chromeの音声認識はインターネット接続が必要です。',
@@ -129,11 +149,13 @@ export default function PracticePage() {
     }
 
     setMicError(null);
+    const useMicMonitor = !recognition.isAndroid();
     const stream = await recognition.start({
       lang: material!.language,
+      captureAudio: useMicMonitor,
       onInterim: (text) => { setInterim(text); },
       onFinal: (text) => {
-        setInput(prev => prev ? `${prev}\n${text}` : text);
+        setInput(prev => appendRecognizedText(prev, text));
         setInterim('');
       },
       onSoundStart: () => setSoundDetected(true),
@@ -146,10 +168,12 @@ export default function PracticePage() {
       },
     });
 
-    if (stream) {
+    if (stream || !useMicMonitor) {
       setRecording(true);
-      showMeter();
-      startMonitor(stream);
+      if (stream) {
+        showMeter();
+        startMonitor(stream);
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import * as service from '../services/materialService';
+import { validationError } from '../utils/validationError';
 
 export async function list(req: Request, res: Response) {
   const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10));
@@ -17,11 +18,11 @@ export async function getOne(req: Request, res: Response) {
 export async function create(req: Request, res: Response) {
   const { title, body, language, difficulty, tags, sourceType, sourceUrl } = req.body;
   if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > 120)
-    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'title is required and must be 1-120 characters.' } });
+    return validationError(res, 'title is required and must be 1-120 characters.');
   if (!body || typeof body !== 'string' || body.trim().length === 0)
-    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'body is required.' } });
+    return validationError(res, 'body is required.');
   if (!language || typeof language !== 'string')
-    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'language is required.' } });
+    return validationError(res, 'language is required.');
 
   const m = await service.createMaterial({ title, body, language, difficulty, tags, sourceType, sourceUrl });
   res.status(201).json(m);
@@ -33,7 +34,7 @@ export async function update(req: Request, res: Response) {
 
   const { title, body, language, difficulty, tags, sourceType, sourceUrl } = req.body;
   if (title !== undefined && (typeof title !== 'string' || title.trim().length === 0 || title.length > 120))
-    return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'title must be 1-120 characters.' } });
+    return validationError(res, 'title must be 1-120 characters.');
 
   const updated = await service.updateMaterial((req.params as { materialId: string }).materialId, { title, body, language, difficulty, tags, sourceType, sourceUrl });
   res.json(updated);

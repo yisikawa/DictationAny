@@ -1,197 +1,52 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useMaterial } from '../features/materials/hooks';
-import { attemptsApi } from '../features/attempts/api';
+import { usePracticeSubmit } from '../features/practice/usePracticeSubmit';
+import { useMicTest } from '../features/practice/useMicTest';
+import { useRecording } from '../features/practice/useRecording';
+import { appendRecognizedText } from '../features/practice/textUtils';
+import { useMicLevel } from '../features/practice/useMicLevel';
 import TextToSpeechControls from '../components/TextToSpeechControls';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import * as recognition from '../features/practice/recognition';
-import { useMicLevel } from '../features/practice/useMicLevel';
-import { useAudioDevices } from '../features/practice/useAudioDevices';
 import styles from './PracticePage.module.css';
 
 type DisplayMode = 'practice' | 'blind';
 
-function appendRecognizedText(prev: string, next: string): string {
-  const text = next.trim();
-  if (!text) return prev;
-  if (!prev.trim()) return text;
-
-  const lines = prev.split('\n');
-  const last = lines[lines.length - 1]?.trim() ?? '';
-  const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
-  const lastNorm = normalize(last);
-  const textNorm = normalize(text);
-
-  if (lastNorm === textNorm || lastNorm.startsWith(textNorm)) return prev;
-  if (textNorm.startsWith(lastNorm)) {
-    lines[lines.length - 1] = text;
-    return lines.join('\n');
-  }
-
-  return `${prev}\n${text}`;
-}
-
-const MIC_ERROR_MESSAGES: Record<string, string> = {
-  'no-speech': '音声が検知できませんでした。下の「マイクテスト」で音量を確認してください。',
-  'network': 'ネットワークエラー。Chromeの音声認識はインターネット接続が必要です。',
-  'not-allowed': 'マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。',
-  'audio-capture': 'マイクが見つかりません。接続を確認してください。',
-  'service-not-allowed': 'このブラウザでは音声認識を利用できません。iPhoneの場合はSafariをご利用ください。',
-};
-
 export default function PracticePage() {
   const { materialId } = useParams<{ materialId: string }>();
-  const navigate = useNavigate();
   const { material, loading, error } = useMaterial(materialId!);
+  const { submitting, submitError, handleSubmit } = usePracticeSubmit(materialId!);
   const [mode, setMode] = useState<DisplayMode>('practice');
   const [input, setInput] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [recording, setRecording] = useState(false);
-  const [interim, setInterim] = useState('');
-  const [soundDetected, setSoundDetected] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
-  const [meterVisible, setMeterVisible] = useState(false);
-  const [testingMic, setTestingMic] = useState(false);
-  const [testStream, setTestStream] = useState<MediaStream | null>(null);
-  const { devices, load: loadDevices } = useAudioDevices();
-  const [selectedDeviceId, setSelectedDeviceId] = useState('');
-  const meterHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { level: micLevel, startMonitor, stopMonitor } = useMicLevel();
+  const {
+    testingMic,
+    meterVisible,
+    devices,
+    selectedDeviceId,
+    micTestError,
+    showMeter,
+    hideMeterDelayed,
+    toggleMicTest,
+    handleDeviceChange,
+    stopTestStream,
+  } = useMicTest(startMonitor, stopMonitor);
+  const { recording, interim, soundDetected, micError: recordingError, toggleRecording } = useRecording({
+    lang: material?.language ?? '',
+    startMonitor,
+    showMeter,
+    hideMeterDelayed,
+    onFinalText: (text) => setInput(prev => appendRecognizedText(prev, text)),
+  });
 
-  useEffect(() => () => { recognition.stop(); stopMonitor(); stopTestStream(); }, [stopMonitor]);
+  useEffect(() => () => { recognition.stop(); stopMonitor(); stopTestStream(); }, [stopMonitor, stopTestStream]);
 
   if (loading) return <LoadingState />;
   if (error || !material) return <ErrorState message={error ?? '教材が見つかりません'} />;
 
-  function stopTestStream() {
-    testStream?.getTracks().forEach(t => t.stop());
-    setTestStream(null);
-  }
-
-  function showMeter() {
-    if (meterHideTimer.current) clearTimeout(meterHideTimer.current);
-    setMeterVisible(true);
-  }
-
-  function hideMeterDelayed() {
-    if (meterHideTimer.current) clearTimeout(meterHideTimer.current);
-    meterHideTimer.current = setTimeout(() => {
-      setMeterVisible(false);
-      stopMonitor();
-    }, 3000);
-  }
-
-  function stopRecording() {
-    setRecording(false);
-    setInterim('');
-    setSoundDetected(false);
-    hideMeterDelayed();
-  }
-
-  async function toggleMicTest() {
-    if (testingMic) {
-      stopMonitor();
-      stopTestStream();
-      setTestingMic(false);
-      setMeterVisible(false);
-      return;
-    }
-
-    setMicError(null);
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setTestStream(stream);
-      setTestingMic(true);
-      showMeter();
-      startMonitor(stream);
-
-      // 初回: デバイス一覧を取得
-      if (devices.length === 0) {
-        const list = await loadDevices();
-        if (list.length > 0 && !selectedDeviceId) {
-          setSelectedDeviceId(list[0].deviceId);
-        }
-      }
-    } catch {
-      setMicError('マイクへのアクセスに失敗しました。ブラウザの許可設定を確認してください。');
-    }
-  }
-
-  async function handleDeviceChange(deviceId: string) {
-    setSelectedDeviceId(deviceId);
-    if (!testingMic) return;
-
-    // テスト中にデバイスを切り替えたら再起動
-    stopMonitor();
-    stopTestStream();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: deviceId } },
-      });
-      setTestStream(stream);
-      startMonitor(stream);
-    } catch {
-      setMicError('選択したデバイスにアクセスできませんでした。');
-      setTestingMic(false);
-    }
-  }
-
-  async function toggleRecording() {
-    if (recording) {
-      recognition.stop();
-      stopRecording();
-      return;
-    }
-
-    setMicError(null);
-    const useMicMonitor = !recognition.isAndroid();
-    const stream = await recognition.start({
-      lang: material!.language,
-      captureAudio: useMicMonitor,
-      onInterim: (text) => { setInterim(text); },
-      onFinal: (text) => {
-        setInput(prev => appendRecognizedText(prev, text));
-        setInterim('');
-      },
-      onSoundStart: () => setSoundDetected(true),
-      onSoundEnd: () => setSoundDetected(false),
-      onEnd: stopRecording,
-      onError: (err) => {
-        const msg = MIC_ERROR_MESSAGES[err] ?? `音声認識エラー: ${err}`;
-        setMicError(msg);
-        stopRecording();
-      },
-    });
-
-    if (stream || !useMicMonitor) {
-      setRecording(true);
-      if (stream) {
-        showMeter();
-        startMonitor(stream);
-      }
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const attempt = await attemptsApi.create(material!.id, input);
-      navigate(`/results/${attempt.id}`);
-    } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : '提出に失敗しました');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
+  const micError = recordingError ?? micTestError;
   const levelPct = Math.min(100, (micLevel / 35) * 100);
 
   return (
@@ -223,7 +78,7 @@ export default function PracticePage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className={styles.inputSection}>
+      <form onSubmit={(e) => handleSubmit(e, input)} className={styles.inputSection}>
         <div className={styles.inputHeader}>
           <h3 className={styles.sectionLabel}>聞き取った内容を入力してください</h3>
           {recognition.isSupported() && (

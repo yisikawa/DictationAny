@@ -7,7 +7,7 @@ import compareRoutes from './routes/compareRoutes';
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173' }));
 app.use(express.json());
 
 app.use('/api/materials', materialRoutes);

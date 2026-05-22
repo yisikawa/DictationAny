@@ -2,6 +2,12 @@ import prisma from '../utils/prisma';
 import type { CreateAttemptInput } from '../types';
 import { compare } from '../services/comparisonService';
 
+type AttemptRow = Awaited<ReturnType<typeof prisma.attempt.findUniqueOrThrow>>;
+
+export function toAttemptResponse(raw: AttemptRow) {
+  return { ...raw, result: JSON.parse(raw.resultJson) };
+}
+
 export async function findByMaterial(materialId: string) {
   return prisma.attempt.findMany({
     where: { materialId },

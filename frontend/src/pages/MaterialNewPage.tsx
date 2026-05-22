@@ -1,22 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import MaterialForm, { type MaterialFormValues } from '../components/MaterialForm';
 import { materialsApi } from '../features/materials/api';
+import { toMaterialPayload } from '../features/materials/payload';
 import styles from './MaterialFormPage.module.css';
 
 export default function MaterialNewPage() {
   const navigate = useNavigate();
 
   async function handleSubmit(values: MaterialFormValues) {
-    const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    await materialsApi.create({
-      title: values.title,
-      body: values.body,
-      language: values.language,
-      difficulty: values.difficulty || undefined,
-      tags,
-      sourceType: 'manual',
-      sourceUrl: values.sourceUrl || undefined,
-    });
+    await materialsApi.create({ ...toMaterialPayload(values), sourceType: 'manual' });
     navigate('/materials');
   }
 

@@ -1,11 +1,17 @@
-const BASE = '/api';
+const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
+
+async function parseJsonSafe(res: Response) {
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  const json = await res.json();
+  const json = await parseJsonSafe(res);
   if (!res.ok) throw new Error(json?.error?.message ?? 'Request failed');
   return json as T;
 }

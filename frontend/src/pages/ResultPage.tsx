@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { attemptsApi, type AttemptDetail } from '../features/attempts/api';
+import { useAsyncResource } from '../hooks/useAsyncResource';
 import DiffViewer from '../components/DiffViewer';
 import ScoreSummary from '../components/ScoreSummary';
 import LoadingState from '../components/LoadingState';
@@ -9,16 +9,10 @@ import styles from './ResultPage.module.css';
 
 export default function ResultPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
-  const [attempt, setAttempt] = useState<AttemptDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    attemptsApi.get(attemptId!)
-      .then(setAttempt)
-      .catch(e => setError(e instanceof Error ? e.message : 'Failed to load'))
-      .finally(() => setLoading(false));
-  }, [attemptId]);
+  const { data: attempt, loading, error } = useAsyncResource<AttemptDetail>(
+    () => attemptsApi.get(attemptId!),
+    [attemptId],
+  );
 
   if (loading) return <LoadingState />;
   if (error || !attempt) return <ErrorState message={error ?? '結果が見つかりません'} />;

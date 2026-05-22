@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import MaterialForm, { type MaterialFormValues } from '../components/MaterialForm';
 import { useMaterial } from '../features/materials/hooks';
 import { materialsApi } from '../features/materials/api';
+import { toMaterialPayload } from '../features/materials/payload';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import styles from './MaterialFormPage.module.css';
@@ -12,15 +13,7 @@ export default function MaterialEditPage() {
   const { material, loading, error } = useMaterial(materialId!);
 
   async function handleSubmit(values: MaterialFormValues) {
-    const tags = values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-    await materialsApi.update(materialId!, {
-      title: values.title,
-      body: values.body,
-      language: values.language,
-      difficulty: values.difficulty || undefined,
-      tags,
-      sourceUrl: values.sourceUrl || undefined,
-    });
+    await materialsApi.update(materialId!, toMaterialPayload(values));
     navigate('/materials');
   }
 

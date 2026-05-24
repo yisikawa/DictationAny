@@ -3,10 +3,16 @@ import react from '@vitejs/plugin-react'
 import mkcert from 'vite-plugin-mkcert'
 
 export default defineConfig({
-  plugins: [react(), mkcert()],
+  plugins: [
+    react(),
+    mkcert({
+      hosts: ['localhost', '192.168.111.10'],
+    }),
+  ],
   server: {
     https: {},
-    host: true,
+    host: '192.168.111.10',
+    port: 5173,
     proxy: {
       '/api': 'http://localhost:3000',
     },

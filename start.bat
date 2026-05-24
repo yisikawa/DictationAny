@@ -1,12 +1,12 @@
 @echo off
 echo Starting DictationAny...
 echo.
-echo [Backend]  http://localhost:3000
-echo [Frontend] http://localhost:5173
+echo [Backend]  http://192.168.111.10:3000
+echo [Frontend] https://192.168.111.10:5173
 echo.
 
 start "DictationAny - Backend"  cmd /k "cd /d "%~dp0backend"  && npm run dev"
 start "DictationAny - Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 
 timeout /t 5 /nobreak >nul
-start http://localhost:5173
+start https://192.168.111.10:5173

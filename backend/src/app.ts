@@ -4,6 +4,7 @@ import materialRoutes from './routes/materialRoutes';
 import importRoutes from './routes/importRoutes';
 import attemptRoutes from './routes/attemptRoutes';
 import compareRoutes from './routes/compareRoutes';
+import ocrCorrectRoutes from './routes/ocrCorrectRoutes';
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/imports', importRoutes);
 app.use('/api/attempts', attemptRoutes);
 app.use('/api/compare', compareRoutes);
+app.use('/api/ocr-correct', ocrCorrectRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } });

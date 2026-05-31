@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Material } from '../types';
 import { fixDuplicateWords, countDuplicates } from '../utils/fixDuplicateWords';
 import { cleanOcrText, countOcrIssues } from '../utils/cleanOcrText';
+import { correctOcrWithProgress } from '../features/materials/api';
 import styles from './MaterialForm.module.css';
 
 export interface MaterialFormValues {
@@ -32,6 +33,9 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
   const [error, setError] = useState<string | null>(null);
   const [fixedCount, setFixedCount] = useState<number | null>(null);
   const [ocrFixedCount, setOcrFixedCount] = useState<number | null>(null);
+  const [aiFixing, setAiFixing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiProgress, setAiProgress] = useState<{ current: number; total: number } | null>(null);
 
   function handleFixDuplicates() {
     const count = countDuplicates(values.body);
@@ -45,6 +49,24 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
     const fixed = cleanOcrText(values.body);
     setValues(v => ({ ...v, body: fixed }));
     setOcrFixedCount(count);
+  }
+
+  async function handleAiCorrect() {
+    setAiFixing(true);
+    setAiError(null);
+    setAiProgress(null);
+    try {
+      const correctedText = await correctOcrWithProgress(
+        values.body,
+        (current, total) => setAiProgress({ current, total }),
+      );
+      setValues(v => ({ ...v, body: correctedText }));
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI修正に失敗しました');
+    } finally {
+      setAiFixing(false);
+      setAiProgress(null);
+    }
   }
 
   function set(key: keyof MaterialFormValues) {
@@ -76,6 +98,9 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
         <div className={styles.labelRow}>
           <label>本文 *</label>
           <div className={styles.btnFixGroup}>
+            <button type="button" className={styles.btnFix} onClick={handleAiCorrect} disabled={aiFixing}>
+              {aiFixing ? 'AI修正中…' : 'AI修正（LM Studio）'}
+            </button>
             <button type="button" className={styles.btnFix} onClick={handleCleanOcr}>
               OCR修正
             </button>
@@ -84,6 +109,20 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
             </button>
           </div>
         </div>
+        {aiError && <p className={styles.error}>{aiError}</p>}
+        {aiProgress && (
+          <div className={styles.progressWrap}>
+            <span className={styles.progressLabel}>
+              AI修正中… {aiProgress.current} / {aiProgress.total} チャンク完了
+            </span>
+            <div className={styles.progressBar}>
+              <div
+                className={styles.progressFill}
+                style={{ width: `${(aiProgress.current / aiProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
         {ocrFixedCount !== null && (
           <p className={ocrFixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
             {ocrFixedCount > 0 ? `${ocrFixedCount} 件のOCRノイズを修正しました` : 'OCRノイズはありませんでした'}

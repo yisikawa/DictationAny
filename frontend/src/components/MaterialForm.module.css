@@ -35,6 +35,28 @@
 .fixSuccess { font-size: 0.8125rem; color: #15803d; margin: 0; }
 .fixNone    { font-size: 0.8125rem; color: var(--color-text-sub); margin: 0; }
 
+.progressWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.progressLabel {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+.progressBar {
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
 .footer { margin-top: 0.5rem; }
 
 .btnSubmit {

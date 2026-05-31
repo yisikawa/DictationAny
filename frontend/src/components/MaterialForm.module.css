@@ -19,6 +19,8 @@
 
 .labelRow { display: flex; align-items: center; justify-content: space-between; }
 
+.btnFixGroup { display: flex; gap: 0.375rem; }
+
 .btnFix {
   font-size: 0.75rem;
   padding: 0.25rem 0.625rem;

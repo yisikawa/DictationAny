@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importsApi } from '../features/imports/api';
-import type { ImportPreviewResponse } from '../types';
+import type { ImportPreviewResponse, ImportSegment } from '../types';
 import styles from './ImportNewPage.module.css';
 import pdfStyles from './ImportPdfPage.module.css';
 
@@ -13,6 +13,7 @@ export default function ImportPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState('en-US');
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
+  const [editedSegments, setEditedSegments] = useState<(ImportSegment & { deleted?: boolean })[]>([]);
   const [title, setTitle] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ export default function ImportPdfPage() {
     try {
       const result = await importsApi.pdfPreview({ file, language });
       setPreview(result);
+      setEditedSegments(result.segments.map(s => ({ ...s })));
       setTitle(result.title);
       setStep('preview');
     } catch (e) {
@@ -50,10 +52,25 @@ export default function ImportPdfPage() {
     }
   }
 
+  function handleSegmentChange(index: number, text: string) {
+    setEditedSegments(prev => prev.map((s, i) => i === index ? { ...s, text } : s));
+  }
+
+  function handleSegmentDelete(index: number) {
+    setEditedSegments(prev => prev.map((s, i) => i === index ? { ...s, deleted: true } : s));
+  }
+
+  function handleSegmentRestore(index: number) {
+    setEditedSegments(prev => prev.map((s, i) => i === index ? { ...s, deleted: false } : s));
+  }
+
   async function handleSave() {
     if (!preview) return;
     setLoading(true);
     setError(null);
+    const activeSegments = editedSegments
+      .filter(s => !s.deleted && s.text.trim().length > 0)
+      .map(({ deleted: _deleted, ...s }) => s);
     try {
       await importsApi.saveMaterial({
         importId: preview.importId,
@@ -61,7 +78,7 @@ export default function ImportPdfPage() {
         sourceType: 'pdf',
         language: preview.language,
         difficulty: difficulty || undefined,
-        segments: preview.segments,
+        segments: activeSegments,
       });
       navigate('/materials');
     } catch (e) {
@@ -134,11 +151,26 @@ export default function ImportPdfPage() {
             </div>
           </div>
 
-          <h2 className={styles.sectionTitle}>テキストプレビュー（{preview.segments.length} 件）</h2>
+          <h2 className={styles.sectionTitle}>
+            テキストプレビュー（{editedSegments.filter(s => !s.deleted).length} / {editedSegments.length} 件）
+          </h2>
           <div className={styles.segmentList}>
-            {preview.segments.map((seg, i) => (
-              <div key={i} className={styles.segment}>
-                <span>{seg.text}</span>
+            {editedSegments.map((seg, i) => (
+              <div key={i} className={`${styles.segment} ${seg.deleted ? pdfStyles.segmentDeleted : ''}`}>
+                <textarea
+                  className={pdfStyles.segmentTextarea}
+                  value={seg.text}
+                  disabled={seg.deleted}
+                  onChange={e => handleSegmentChange(i, e.target.value)}
+                  rows={Math.max(1, Math.ceil(seg.text.length / 80))}
+                />
+                <div className={pdfStyles.segmentActions}>
+                  {seg.deleted ? (
+                    <button className={pdfStyles.btnRestore} onClick={() => handleSegmentRestore(i)}>復元</button>
+                  ) : (
+                    <button className={pdfStyles.btnDelete} onClick={() => handleSegmentDelete(i)}>除外</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

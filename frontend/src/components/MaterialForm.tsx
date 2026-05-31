@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Material } from '../types';
 import { fixDuplicateWords, countDuplicates } from '../utils/fixDuplicateWords';
+import { cleanOcrText, countOcrIssues } from '../utils/cleanOcrText';
 import styles from './MaterialForm.module.css';
 
 export interface MaterialFormValues {
@@ -30,12 +31,20 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fixedCount, setFixedCount] = useState<number | null>(null);
+  const [ocrFixedCount, setOcrFixedCount] = useState<number | null>(null);
 
   function handleFixDuplicates() {
     const count = countDuplicates(values.body);
     const fixed = fixDuplicateWords(values.body);
     setValues(v => ({ ...v, body: fixed }));
     setFixedCount(count);
+  }
+
+  function handleCleanOcr() {
+    const count = countOcrIssues(values.body);
+    const fixed = cleanOcrText(values.body);
+    setValues(v => ({ ...v, body: fixed }));
+    setOcrFixedCount(count);
   }
 
   function set(key: keyof MaterialFormValues) {
@@ -66,16 +75,26 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
       <div className={styles.field}>
         <div className={styles.labelRow}>
           <label>本文 *</label>
-          <button type="button" className={styles.btnFix} onClick={handleFixDuplicates}>
-            重複単語を修正
-          </button>
+          <div className={styles.btnFixGroup}>
+            <button type="button" className={styles.btnFix} onClick={handleCleanOcr}>
+              OCR修正
+            </button>
+            <button type="button" className={styles.btnFix} onClick={handleFixDuplicates}>
+              重複単語を修正
+            </button>
+          </div>
         </div>
+        {ocrFixedCount !== null && (
+          <p className={ocrFixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
+            {ocrFixedCount > 0 ? `${ocrFixedCount} 件のOCRノイズを修正しました` : 'OCRノイズはありませんでした'}
+          </p>
+        )}
         {fixedCount !== null && (
           <p className={fixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
             {fixedCount > 0 ? `${fixedCount} 件の重複単語を修正しました` : '重複単語はありませんでした'}
           </p>
         )}
-        <textarea value={values.body} onChange={e => { setFixedCount(null); set('body')(e); }} required rows={8} />
+        <textarea value={values.body} onChange={e => { setFixedCount(null); setOcrFixedCount(null); set('body')(e); }} required rows={8} />
       </div>
       <div className={styles.row}>
         <div className={styles.field}>

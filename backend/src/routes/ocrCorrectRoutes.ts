@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { correctOcrWithLlm } from '../services/lmStudioService';
+import { correctOcrWithLlm } from '../services/ollamaService';
 
 const router = Router();
 

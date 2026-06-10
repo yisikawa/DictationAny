@@ -84,17 +84,17 @@ async function correctChunk(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
-      throw new Error('LM Studio に接続できません。LM Studio のサーバーが起動しているか確認してください。');
+      throw new Error('Ollama に接続できません。Ollama が起動しているか確認してください。');
     }
     if (msg.includes('TimeoutError') || msg.includes('timed out')) {
-      throw new Error('LM Studio からの応答がタイムアウトしました。');
+      throw new Error('Ollama からの応答がタイムアウトしました。');
     }
-    throw new Error(`LM Studio エラー: ${msg}`);
+    throw new Error(`Ollama エラー: ${msg}`);
   }
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`LM Studio がエラーを返しました (${response.status}): ${body}`);
+    throw new Error(`Ollama がエラーを返しました (${response.status}): ${body}`);
   }
 
   const data = await response.json() as {
@@ -102,7 +102,7 @@ async function correctChunk(
   };
 
   const raw = data.choices?.[0]?.message?.content?.trim();
-  if (!raw) throw new Error('LM Studio から空のレスポンスが返されました。');
+  if (!raw) throw new Error('Ollama から空のレスポンスが返されました。');
 
   const corrected = stripLlmWrappers(raw);
 
@@ -121,8 +121,8 @@ export async function correctOcrWithLlm(
   text: string,
   onProgress?: (current: number, total: number) => void,
 ): Promise<string> {
-  const baseUrl = process.env.LM_STUDIO_BASE_URL ?? 'http://localhost:1234/v1';
-  const model = process.env.LM_STUDIO_MODEL ?? 'llama3.1-8b';
+  const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
+  const model = process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b';
 
   const chunks = splitIntoChunks(text);
   const total = chunks.length;

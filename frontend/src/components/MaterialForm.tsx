@@ -99,7 +99,7 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
           <label>本文 *</label>
           <div className={styles.btnFixGroup}>
             <button type="button" className={styles.btnFix} onClick={handleAiCorrect} disabled={aiFixing}>
-              {aiFixing ? 'AI修正中…' : 'AI修正（LM Studio）'}
+              {aiFixing ? 'AI修正中…' : 'AI修正（Ollama）'}
             </button>
             <button type="button" className={styles.btnFix} onClick={handleCleanOcr}>
               OCR修正

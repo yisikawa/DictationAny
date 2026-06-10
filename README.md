@@ -12,6 +12,7 @@
 - **ディクテーション** — 聞き取った内容をテキスト入力、またはマイクで音声入力して提出
 - **採点・差分表示** — 単語単位の差分ハイライト、スコア・一致率・聞き落とし単語を表示
 - **練習履歴** — 過去の提出結果を一覧で確認
+- **AI OCR 修正** — Ollama（`llama3.1:latest`）を使った OCR エラーの自動修正（教材編集画面）
 
 ---
 
@@ -33,8 +34,8 @@ cd backend
 # 1. Prisma クライアントを生成
 npx prisma generate
 
-# 2. .env ファイルを作成
-echo DATABASE_URL="file:./dev.db" > .env
+# 2. .env ファイルを作成（.env.example をコピーして編集）
+cp .env.example .env
 
 # 3. マイグレーションを適用して dev.db を作成
 npx prisma migrate deploy
@@ -42,6 +43,23 @@ npx prisma migrate deploy
 
 > **注意:** `src/generated/prisma/` が存在しない場合や `dev.db` がない場合は上記を実行してください。  
 > `Cannot find module '../generated/prisma/client'` というエラーが出た場合は `npx prisma generate` の実行忘れが原因です。
+
+---
+
+### Ollama のセットアップ（AI OCR 修正機能）
+
+[Ollama](https://ollama.com) をインストール後、モデルを取得してください。
+
+```bash
+ollama pull llama3.1:latest
+```
+
+`backend/.env` に接続先を設定します（デフォルトのまま変更不要）：
+
+```dotenv
+OLLAMA_BASE_URL="http://localhost:11434/v1"
+OLLAMA_MODEL="llama3.1:latest"
+```
 
 ---
 
@@ -83,7 +101,7 @@ iPhone での操作：
 PC の IP アドレスを確認して Safari でアクセスします。
 
 ```
-https://<PCのIPアドレス>:5173
+https://<PCのIPアドレス>:5160
 ```
 
 > **注意:** iPhone Chrome / Firefox では音声入力の Web Speech API が利用できません。**Safari** をご利用ください。
@@ -122,7 +140,7 @@ cd frontend
 npm run dev
 ```
 
-ブラウザで `http://localhost:5173` を開きます。
+ブラウザで `https://192.168.111.10:5160` を開きます。
 
 ---
 
@@ -237,3 +255,4 @@ DictationAny/
 | 音声読み上げ | Web Speech API (SpeechSynthesis) |
 | 音声入力 | Web Speech API (SpeechRecognition) — Chrome / Edge / iOS Safari |
 | 比較アルゴリズム | LCS diff + Levenshtein 距離 |
+| AI OCR 修正 | Ollama (`llama3.1:latest`) — OpenAI 互換 API |

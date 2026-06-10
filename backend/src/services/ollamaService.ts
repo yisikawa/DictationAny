@@ -122,7 +122,7 @@ export async function correctOcrWithLlm(
   onProgress?: (current: number, total: number) => void,
 ): Promise<string> {
   const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
-  const model = process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b';
+  const model = process.env.OLLAMA_MODEL ?? 'llama3.1:latest';
 
   const chunks = splitIntoChunks(text);
   const total = chunks.length;

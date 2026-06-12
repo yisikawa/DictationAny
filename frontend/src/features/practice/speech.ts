@@ -86,9 +86,13 @@ export function speakSentences(
   setTimeout(next, 50);
 }
 
+const ABBREV_RE = /\b(Mr|Mrs|Ms|Miss|Dr|Prof|Rev|Sr|Jr|St|Ave|Blvd|Rd|Ln|vs|etc)\./g;
+const PLACEHOLDER = '\x01';
+
 export function splitToSentences(text: string): string[] {
-  return text
+  const protected_ = text.replace(ABBREV_RE, `$1${PLACEHOLDER}`);
+  return protected_
     .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
+    .map(s => s.trim().replace(/\x01/g, '.'))
     .filter(Boolean);
 }

@@ -50,10 +50,12 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
   }
 
   function handleNlpFormat() {
-    const count = countFormattingIssues(values.body);
-    const formatted = formatEnglishText(values.body);
+    const original = values.body;
+    const beforeCount = countFormattingIssues(original);
+    const formatted = formatEnglishText(original);
+    const afterCount = countFormattingIssues(formatted);
     setValues(v => ({ ...v, body: formatted }));
-    setNlpFixedCount(count);
+    setNlpFixedCount(Math.max(0, beforeCount - afterCount));
   }
 
   function set(key: keyof MaterialFormValues) {

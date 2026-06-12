@@ -13,6 +13,11 @@ const OCR_FIXES: Array<[RegExp, string]> = [
   // Digit-letter confusion in numeric context (e.g. "2l3" → "213", "2O3" → "203")
   [/(\d)l(\d)/g, '$11$2'],
   [/(\d)O(\d)/g, '$10$2'],
+  // Capital I mistaken as L by OCR (e.g. "Lt" → "It", "Lt's" → "It's", "L'm" → "I'm")
+  [/\bLt\b/g, 'It'],
+  [/\bLt'/g, "It'"],
+  [/\bL(?='[a-z])/g, 'I'],
+  [/\bL\b/g, 'I'],
 ]
 
 export function formatEnglishText(text: string): string {
@@ -51,6 +56,11 @@ export function countFormattingIssues(text: string): number {
   for (const [pat] of OCR_FIXES) {
     count += (text.match(pat) ?? []).length
   }
+
+  // Spacing issues fixed by formatEnglishText
+  count += (text.match(/\s+[,;:!?.]/g) ?? []).length
+  count += (text.match(/[.!?][A-Za-z]/g) ?? []).length
+  count += (text.match(/[ \t]{2,}/g) ?? []).length
 
   const doc = nlp(text)
   doc.sentences().forEach(s => {

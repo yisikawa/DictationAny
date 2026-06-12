@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { Material } from '../types';
 import { fixDuplicateWords, countDuplicates } from '../utils/fixDuplicateWords';
 import { cleanOcrText, countOcrIssues } from '../utils/cleanOcrText';
-import { correctOcrWithProgress } from '../features/materials/api';
+import { formatEnglishText, countFormattingIssues } from '../utils/formatEnglishText';
 import styles from './MaterialForm.module.css';
 
 export interface MaterialFormValues {
@@ -33,9 +33,7 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
   const [error, setError] = useState<string | null>(null);
   const [fixedCount, setFixedCount] = useState<number | null>(null);
   const [ocrFixedCount, setOcrFixedCount] = useState<number | null>(null);
-  const [aiFixing, setAiFixing] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiProgress, setAiProgress] = useState<{ current: number; total: number } | null>(null);
+  const [nlpFixedCount, setNlpFixedCount] = useState<number | null>(null);
 
   function handleFixDuplicates() {
     const count = countDuplicates(values.body);
@@ -51,22 +49,11 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
     setOcrFixedCount(count);
   }
 
-  async function handleAiCorrect() {
-    setAiFixing(true);
-    setAiError(null);
-    setAiProgress(null);
-    try {
-      const correctedText = await correctOcrWithProgress(
-        values.body,
-        (current, total) => setAiProgress({ current, total }),
-      );
-      setValues(v => ({ ...v, body: correctedText }));
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'AI修正に失敗しました');
-    } finally {
-      setAiFixing(false);
-      setAiProgress(null);
-    }
+  function handleNlpFormat() {
+    const count = countFormattingIssues(values.body);
+    const formatted = formatEnglishText(values.body);
+    setValues(v => ({ ...v, body: formatted }));
+    setNlpFixedCount(count);
   }
 
   function set(key: keyof MaterialFormValues) {
@@ -98,8 +85,8 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
         <div className={styles.labelRow}>
           <label>本文 *</label>
           <div className={styles.btnFixGroup}>
-            <button type="button" className={styles.btnFix} onClick={handleAiCorrect} disabled={aiFixing}>
-              {aiFixing ? 'AI修正中…' : 'AI修正（Ollama）'}
+            <button type="button" className={styles.btnFix} onClick={handleNlpFormat}>
+              英文成型
             </button>
             <button type="button" className={styles.btnFix} onClick={handleCleanOcr}>
               OCR修正
@@ -109,19 +96,10 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
             </button>
           </div>
         </div>
-        {aiError && <p className={styles.error}>{aiError}</p>}
-        {aiProgress && (
-          <div className={styles.progressWrap}>
-            <span className={styles.progressLabel}>
-              AI修正中… {aiProgress.current} / {aiProgress.total} チャンク完了
-            </span>
-            <div className={styles.progressBar}>
-              <div
-                className={styles.progressFill}
-                style={{ width: `${(aiProgress.current / aiProgress.total) * 100}%` }}
-              />
-            </div>
-          </div>
+        {nlpFixedCount !== null && (
+          <p className={nlpFixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
+            {nlpFixedCount > 0 ? `${nlpFixedCount} 件の英文成型を適用しました` : '修正箇所はありませんでした'}
+          </p>
         )}
         {ocrFixedCount !== null && (
           <p className={ocrFixedCount > 0 ? styles.fixSuccess : styles.fixNone}>
@@ -133,7 +111,7 @@ export default function MaterialForm({ initial, onSubmit, submitLabel = '保存'
             {fixedCount > 0 ? `${fixedCount} 件の重複単語を修正しました` : '重複単語はありませんでした'}
           </p>
         )}
-        <textarea value={values.body} onChange={e => { setFixedCount(null); setOcrFixedCount(null); set('body')(e); }} required rows={8} />
+        <textarea value={values.body} onChange={e => { setFixedCount(null); setOcrFixedCount(null); setNlpFixedCount(null); set('body')(e); }} required rows={8} />
       </div>
       <div className={styles.row}>
         <div className={styles.field}>

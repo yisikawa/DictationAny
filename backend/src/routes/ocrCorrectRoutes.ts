@@ -17,14 +17,22 @@ router.post('/', async (req: Request, res: Response) => {
 
   const send = (payload: object) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
 
+  const abort = new AbortController();
+  res.on('close', () => abort.abort());
+
   try {
-    const correctedText = await correctOcrWithLlm(text, (current, total) => {
-      send({ type: 'progress', current, total });
-    });
+    const correctedText = await correctOcrWithLlm(
+      text,
+      (current, total) => { send({ type: 'progress', current, total }); },
+      abort.signal,
+    );
     send({ type: 'done', correctedText });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'AI修正に失敗しました';
-    send({ type: 'error', message });
+    // クライアントが切断済みなら送信不要
+    if (!abort.signal.aborted) {
+      const message = err instanceof Error ? err.message : 'AI修正に失敗しました';
+      send({ type: 'error', message });
+    }
   }
 
   res.end();

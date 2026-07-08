@@ -64,6 +64,7 @@ async function correctChunk(
   baseUrl: string,
   model: string,
   chunk: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   let response: Response;
   try {
@@ -79,10 +80,15 @@ async function correctChunk(
         temperature: 0.1,
         max_tokens: 4096,
       }),
-      signal: AbortSignal.timeout(120_000),
+      signal: signal
+        ? AbortSignal.any([AbortSignal.timeout(120_000), signal])
+        : AbortSignal.timeout(120_000),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    if (signal?.aborted || msg.includes('AbortError') || msg.includes('aborted')) {
+      throw new Error('クライアントによって中断されました。');
+    }
     if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
       throw new Error('Ollama に接続できません。Ollama が起動しているか確認してください。');
     }
@@ -120,6 +126,7 @@ async function correctChunk(
 export async function correctOcrWithLlm(
   text: string,
   onProgress?: (current: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1';
   const model = process.env.OLLAMA_MODEL ?? 'llama3.1:latest';
@@ -130,7 +137,8 @@ export async function correctOcrWithLlm(
   // 並列だとモデルに負荷がかかるため順番に処理
   const results: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
-    results.push(await correctChunk(baseUrl, model, chunks[i]));
+    if (signal?.aborted) throw new Error('クライアントによって中断されました。');
+    results.push(await correctChunk(baseUrl, model, chunks[i], signal));
     onProgress?.(i + 1, total);
   }
 

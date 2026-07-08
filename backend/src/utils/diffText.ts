@@ -1,17 +1,28 @@
 import type { DiffToken } from '../types';
 
+// これ以上長い文字列は切り詰めて比較する(メモリ・CPU保護)
+export const LEVENSHTEIN_MAX_CHARS = 10_000;
+
 export function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0) as number[]]);
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  const s = a.length > LEVENSHTEIN_MAX_CHARS ? a.slice(0, LEVENSHTEIN_MAX_CHARS) : a;
+  const t = b.length > LEVENSHTEIN_MAX_CHARS ? b.slice(0, LEVENSHTEIN_MAX_CHARS) : b;
+  const m = s.length, n = t.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  // 2行のみ保持するローリングDP(メモリ O(n))
+  let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  let curr: number[] = new Array<number>(n + 1).fill(0);
   for (let i = 1; i <= m; i++) {
+    curr[0] = i;
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      curr[j] = s[i - 1] === t[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
     }
+    [prev, curr] = [curr, prev];
   }
-  return dp[m][n];
+  return prev[n];
 }
 
 export function diffWords(orig: string[], sub: string[]): DiffToken[] {

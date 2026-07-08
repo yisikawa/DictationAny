@@ -1,6 +1,6 @@
 import type { CompareInput, CompareResult, CompareOptions } from '../types';
 import { normalize, tokenize } from '../utils/normalizeText';
-import { diffWords, levenshtein } from '../utils/diffText';
+import { diffWords, levenshtein, LEVENSHTEIN_MAX_CHARS } from '../utils/diffText';
 
 const DEFAULT_OPTS: Required<CompareOptions> = {
   caseSensitive: false,
@@ -24,8 +24,9 @@ export function compare(input: CompareInput): CompareResult {
     : Math.round(matchedCount / origWords.length * 100);
 
   const dist = levenshtein(normOrig, normSub);
-  const charAccuracy = normOrig.length === 0 ? 100
-    : Math.round(Math.max(0, 1 - dist / normOrig.length) * 100);
+  const cappedOrigLen = Math.min(normOrig.length, LEVENSHTEIN_MAX_CHARS);
+  const charAccuracy = cappedOrigLen === 0 ? 100
+    : Math.round(Math.max(0, 1 - dist / cappedOrigLen) * 100);
 
   const score = Math.round(wordAccuracy * 0.7 + charAccuracy * 0.3);
 

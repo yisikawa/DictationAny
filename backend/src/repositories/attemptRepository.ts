@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma';
 import type { CreateAttemptInput } from '../types';
 import { compare } from '../services/comparisonService';
+import { NotFoundError } from '../utils/httpError';
 
 type AttemptRow = Awaited<ReturnType<typeof prisma.attempt.findUniqueOrThrow>>;
 
@@ -25,7 +26,7 @@ export async function findById(id: string) {
 
 export async function create(input: CreateAttemptInput) {
   const material = await prisma.material.findUnique({ where: { id: input.materialId } });
-  if (!material) throw new Error('Material not found');
+  if (!material) throw new NotFoundError('教材が見つかりません。削除された可能性があります。');
 
   const result = compare({
     originalText: material.body,

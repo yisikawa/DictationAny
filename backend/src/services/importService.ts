@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma';
 import { parseSubtitle, segmentsToBody } from '../utils/subtitleParser';
 import type { CreateImportInput, SaveImportInput } from '../types';
+import { NotFoundError } from '../utils/httpError';
 
 export async function previewImport(input: CreateImportInput) {
   const format = input.subtitleFormat ?? 'plain';
@@ -37,7 +38,7 @@ export async function getImportJob(id: string) {
 
 export async function saveImportMaterial(input: SaveImportInput) {
   const job = await prisma.importJob.findUnique({ where: { id: input.importId } });
-  if (!job) throw new Error('ImportJob not found');
+  if (!job) throw new NotFoundError('インポートジョブが見つかりません。');
 
   const body = segmentsToBody(input.segments);
 

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import * as recognition from './recognition';
-import { appendRecognizedText } from './textUtils';
 
 const MIC_ERROR_MESSAGES: Record<string, string> = {
   'no-speech': '音声が検知できませんでした。下の「マイクテスト」で音量を確認してください。',

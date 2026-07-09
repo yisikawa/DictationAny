@@ -483,10 +483,11 @@ export async function correctOcrWithLlm(
 }
 ```
 
-あわせて `correctChunk` 内の catch 節にabort由来の分岐を追加(`msg.includes('TimeoutError')` の判定より前に置く):
+あわせて `correctChunk` 内の catch 節にabort由来の分岐を追加(`msg.includes('TimeoutError')` の判定より前に置く)。
+注意: NodeのTimeoutErrorはメッセージに "aborted" を含むため、メッセージ文字列での判定は誤分類を招く。`signal?.aborted` のみで判定すること:
 
 ```typescript
-    if (signal?.aborted || msg.includes('AbortError') || msg.includes('aborted')) {
+    if (signal?.aborted) {
       throw new Error('クライアントによって中断されました。');
     }
 ```

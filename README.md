@@ -18,7 +18,7 @@
 
 ## セットアップ
 
-**前提条件:** Node.js 18 以上
+**前提条件:** Node.js 22 以上
 
 ```bash
 # リポジトリをクローン後、依存パッケージをインストール
@@ -90,6 +90,8 @@ mkcert -CAROOT
 
 表示されたフォルダ内の `rootCA.pem` を iPhone に転送します（メール・LINE・iCloud Drive など）。
 
+> **注意:** フロントエンドの開発サーバーが LAN の IP アドレスにバインドされていない場合、同一 Wi-Fi 内の他端末からはアクセスできません。`frontend/.env.local`（Git 管理外）に `VITE_DEV_HOST="<PCのIPアドレス>"` を設定してください。未設定時は `localhost` にバインドされます。
+
 iPhone での操作：
 
 1. 転送したファイルを開く →「プロファイルがダウンロードされました」と表示
@@ -140,7 +142,7 @@ cd frontend
 npm run dev
 ```
 
-ブラウザで `https://192.168.111.10:5160` を開きます。
+既定では `https://localhost:5160` で起動します。`frontend/.env.local` に `VITE_DEV_HOST` を設定している場合はそのホスト（例: `https://192.168.111.10:5160`）で開きます。
 
 ---
 
@@ -214,12 +216,23 @@ npm run dev
 
 ## テスト
 
+**バックエンド**
+
 ```bash
 cd backend
 npm test
 ```
 
 比較ロジック（LCS diff・スコア計算）と字幕パーサーのユニットテストが実行されます。
+
+**フロントエンド**
+
+```bash
+cd frontend
+npm test
+```
+
+英文成型ロジックなどのユニットテストが実行されます。
 
 ---
 

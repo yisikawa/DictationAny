@@ -46,6 +46,16 @@ export interface Attempt {
   createdAt: string;
 }
 
+export interface AttemptListItem {
+  id: string;
+  materialId: string;
+  score: number;
+  wordAccuracy: number;
+  characterAccuracy: number;
+  createdAt: string;
+  material: { title: string };
+}
+
 export type DiffType = 'equal' | 'missing' | 'extra' | 'replace';
 
 export interface DiffToken {

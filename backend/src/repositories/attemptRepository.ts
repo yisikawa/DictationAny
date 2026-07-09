@@ -9,15 +9,27 @@ export function toAttemptResponse(raw: AttemptRow) {
   return { ...raw, result: JSON.parse(raw.resultJson) };
 }
 
+// 一覧では巨大な resultJson / submittedText を返さない
+const listSelect = {
+  id: true,
+  materialId: true,
+  score: true,
+  wordAccuracy: true,
+  characterAccuracy: true,
+  createdAt: true,
+  material: { select: { title: true } },
+} as const;
+
 export async function findByMaterial(materialId: string) {
   return prisma.attempt.findMany({
     where: { materialId },
     orderBy: { createdAt: 'desc' },
+    select: listSelect,
   });
 }
 
 export async function findAll() {
-  return prisma.attempt.findMany({ orderBy: { createdAt: 'desc' } });
+  return prisma.attempt.findMany({ orderBy: { createdAt: 'desc' }, select: listSelect });
 }
 
 export async function findById(id: string) {

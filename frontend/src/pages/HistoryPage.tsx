@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import { attemptsApi } from '../features/attempts/api';
 import { useAsyncResource } from '../hooks/useAsyncResource';
-import type { Attempt } from '../types';
+import type { AttemptListItem } from '../types';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import styles from './HistoryPage.module.css';
 
 export default function HistoryPage() {
-  const { data: attempts, loading, error } = useAsyncResource<Attempt[]>(
+  const { data: attempts, loading, error } = useAsyncResource<AttemptListItem[]>(
     () => attemptsApi.list(),
     [],
   );
@@ -33,6 +33,7 @@ export default function HistoryPage() {
           <thead>
             <tr>
               <th>日時</th>
+              <th>教材</th>
               <th>スコア</th>
               <th>単語一致率</th>
               <th>文字一致率</th>
@@ -43,6 +44,7 @@ export default function HistoryPage() {
             {list.map(a => (
               <tr key={a.id}>
                 <td className={styles.date}>{new Date(a.createdAt).toLocaleString('ja-JP')}</td>
+                <td>{a.material.title}</td>
                 <td><span className={`${styles.score} ${scoreColor(a.score)}`}>{a.score}</span></td>
                 <td>{a.wordAccuracy}%</td>
                 <td>{a.characterAccuracy}%</td>

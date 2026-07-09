@@ -3,7 +3,9 @@ const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 async function parseJsonSafe(res: Response) {
   if (res.status === 204) return null;
   const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) return null;
+  // プロキシやサーバ停止時はHTML等の非JSONが返ることがある
+  try { return JSON.parse(text); } catch { return null; }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -12,14 +14,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   const json = await parseJsonSafe(res);
-  if (!res.ok) throw new Error(json?.error?.message ?? 'Request failed');
+  if (!res.ok) throw new Error(json?.error?.message ?? `リクエストに失敗しました (${res.status})`);
   return json as T;
 }
 
 async function requestFile<T>(path: string, body: FormData): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { method: 'POST', body });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message ?? 'Request failed');
+  const json = await parseJsonSafe(res);
+  if (!res.ok) throw new Error(json?.error?.message ?? `リクエストに失敗しました (${res.status})`);
   return json as T;
 }
 

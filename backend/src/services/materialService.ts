@@ -28,7 +28,6 @@ export async function createMaterial(input: CreateMaterialInput) {
 }
 
 export async function updateMaterial(id: string, input: UpdateMaterialInput) {
-  await repo.findById(id); // throws if not found
   const m = await repo.update(id, input);
   return formatMaterial(m)!;
 }

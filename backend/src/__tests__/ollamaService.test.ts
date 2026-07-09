@@ -37,4 +37,16 @@ describe('correctOcrWithLlm', () => {
     expect(result).toBe('hello world this is a test sentence.');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('クライアントが中断していないOllamaタイムアウトはタイムアウトエラーとして報告される', async () => {
+    const timeoutError = new Error('The operation was aborted due to timeout');
+    timeoutError.name = 'TimeoutError';
+    const fetchMock = vi.fn(async () => { throw timeoutError; });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const signal = new AbortController().signal;
+
+    await expect(correctOcrWithLlm('hello world', undefined, signal))
+      .rejects.toThrow('タイムアウト');
+  });
 });

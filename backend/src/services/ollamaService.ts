@@ -86,13 +86,13 @@ async function correctChunk(
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (signal?.aborted || msg.includes('AbortError') || msg.includes('aborted')) {
+    if (signal?.aborted) {
       throw new Error('クライアントによって中断されました。');
     }
     if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
       throw new Error('Ollama に接続できません。Ollama が起動しているか確認してください。');
     }
-    if (msg.includes('TimeoutError') || msg.includes('timed out')) {
+    if ((err instanceof Error && err.name === 'TimeoutError') || msg.includes('TimeoutError') || msg.includes('timed out')) {
       throw new Error('Ollama からの応答がタイムアウトしました。');
     }
     throw new Error(`Ollama エラー: ${msg}`);

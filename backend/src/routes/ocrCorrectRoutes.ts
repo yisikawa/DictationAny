@@ -35,6 +35,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
   }
 
+  // 既に切断済みの接続に対して res.end() を呼んでも安全なno-op
   res.end();
 });
 

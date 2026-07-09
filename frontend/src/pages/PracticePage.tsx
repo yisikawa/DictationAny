@@ -107,7 +107,7 @@ export default function PracticePage() {
               <ol className={styles.micFixSteps}>
                 <li>タスクバーの🔊を右クリック →「サウンドの設定を開く」</li>
                 <li>「サウンド コントロール パネル」→「録音」タブを開く</li>
-                <li>「マイク (Logi C270)」を右クリック →<strong>「既定の通信デバイスとして設定」</strong></li>
+                <li>使用するマイクを右クリック →<strong>「既定の通信デバイスとして設定」</strong></li>
                 <li>ページをリロードして再度「録音」を押す</li>
               </ol>
             )}

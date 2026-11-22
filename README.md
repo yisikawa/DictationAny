@@ -8,6 +8,7 @@
 
 - **教材管理** — テキストを直接入力して教材を登録・編集・削除
 - **字幕取り込み** — YouTube / Udemy などの SRT / WebVTT 字幕から教材を作成
+- **音声取り込み** — 音声ファイル（mp3 / m4a / wav など）を whisper.cpp で文字起こしして教材を作成
 - **音声読み上げ** — ブラウザの Web Speech API で教材本文を読み上げ（速度調整・文単位再生対応）
 - **ディクテーション** — 聞き取った内容をテキスト入力、またはマイクで音声入力して提出
 - **採点・差分表示** — 単語単位の差分ハイライト、スコア・一致率・聞き落とし単語を表示
@@ -60,6 +61,43 @@ ollama pull llama3.1:latest
 OLLAMA_BASE_URL="http://localhost:11434/v1"
 OLLAMA_MODEL="llama3.1:latest"
 ```
+
+---
+
+### whisper.cpp のセットアップ（音声取り込み機能）
+
+音声ファイルから教材を作る機能は、ローカルの [whisper.cpp](https://github.com/ggml-org/whisper.cpp) で文字起こしします（音声は外部送信されません）。**ffmpeg** も必要です。
+
+```powershell
+# 1. whisper.cpp の Windows 用バイナリを取得（展開すると bin\Release\whisper-cli.exe ができる）
+New-Item -ItemType Directory -Force C:\tools\whisper.cpp\bin | Out-Null
+Invoke-WebRequest https://github.com/ggml-org/whisper.cpp/releases/download/b5907/whisper-bin-x64.zip -OutFile $env:TEMP\whisper-bin-x64.zip
+Expand-Archive $env:TEMP\whisper-bin-x64.zip -DestinationPath C:\tools\whisper.cpp\bin -Force
+
+# 2. 英語モデルを取得（約465MB。軽量な ggml-base.en.bin は約141MB）
+New-Item -ItemType Directory -Force C:\tools\whisper.cpp\models | Out-Null
+Invoke-WebRequest https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin -OutFile C:\tools\whisper.cpp\models\ggml-small.en.bin
+```
+
+`backend/.env` に実行ファイルとモデルのパスを設定します（`backend/.env.example` に雛形があります）。
+
+```dotenv
+STT_PROVIDER="whisper-cpp"
+WHISPER_CPP_BIN="C:\\tools\\whisper.cpp\\bin\\Release\\whisper-cli.exe"
+WHISPER_MODEL_PATH="C:\\tools\\whisper.cpp\\models\\ggml-small.en.bin"
+WHISPER_THREADS="8"
+FFMPEG_PATH="ffmpeg"
+```
+
+モデルの目安（実測: 5分20秒の英語音声）:
+
+| モデル | サイズ | 処理時間 | 単語一致率 |
+|---|---|---|---|
+| `ggml-base.en.bin` | 141MB | 26秒 | 93% |
+| `ggml-small.en.bin`（推奨） | 465MB | 72秒 | 95% |
+| `ggml-medium.en.bin` | 1.46GB | 193秒 | 97% |
+
+日本語など他言語を扱う場合は、多言語モデル（例: `ggml-small.bin`）を指定してください。
 
 ---
 
@@ -173,6 +211,17 @@ npm run dev
 
 > **注意:** スキャン画像の PDF（OCR 処理されていないもの）はテキスト抽出できません。テキストレイヤーを含む PDF が対象です。
 
+**音声ファイルから取り込む場合**
+
+1. 「教材」→「音声から取り込む」をクリック
+2. 音声ファイル（mp3 / m4a / wav / ogg / webm / flac など、最大100MB）を選択
+3. 言語（英語なら English (US / UK)）を選んで「文字起こし開始」
+4. 進捗が 100% になるまで待つ（5分の音声で1〜2分程度）
+5. 文字起こし結果を確認し、不要な行を「除外」、誤りを直接修正
+6. タイトル・難易度を設定して「教材として保存」
+
+> **ヒント:** 認識が不完全な可能性がある区間には ⚠ が表示されます。また「英文を整形する」をオンにすると、大文字・句読点・単語間スペースが補正されます。音声ファイルは処理後にサーバーから自動削除されます。
+
 ---
 
 ### 2. 練習する
@@ -252,6 +301,7 @@ DictationAny/
     src/
       controllers/  # リクエストハンドラー
       services/     # ビジネスロジック
+      stt/          # 文字起こしプロバイダ（whisper.cpp / OpenAI互換）
       repositories/ # DB アクセス
       utils/        # diff・パーサーなどユーティリティ
       __tests__/    # ユニットテスト
@@ -267,5 +317,6 @@ DictationAny/
 | データベース | SQLite（Prisma 7） |
 | 音声読み上げ | Web Speech API (SpeechSynthesis) |
 | 音声入力 | Web Speech API (SpeechRecognition) — Chrome / Edge / iOS Safari |
+| 音声認識（音声取り込み） | whisper.cpp（ローカル） / OpenAI 互換 STT API |
 | 比較アルゴリズム | LCS diff + Levenshtein 距離 |
 | AI OCR 修正 | Ollama (`llama3.1:latest`) — OpenAI 互換 API |

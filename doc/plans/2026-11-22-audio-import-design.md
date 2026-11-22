@@ -356,7 +356,7 @@ export function toTranscriptResult(json: WhisperJson): TranscriptResult;
 3. 連続する完全同一文字列（Whisper のループ hallucination）を除去
 4. `stripNonSpeechTags` 後に空になるセグメントは捨てる（無音時の `[BLANK_AUDIO]` もこれで除去できることを PoC で確認）
 
-**品質ガード（PoC の結果を反映）:** 5秒を超えるセグメントで文字密度が 4文字/秒未満のものは「認識が不完全な可能性」と判定し、`parsedJson` に `warnings: [{ startTimeMs, endTimeMs, reason: 'low_speech_density' }]` を併せて保存する。プレビュー画面では該当行に警告を表示する。PoC では small/medium が冒頭27秒の音声を1文に圧縮したケースをこの判定で検出できた。
+**品質ガード（PoC の結果を反映）:** 5秒を超えるセグメントで文字密度が 4文字/秒未満のものは「認識が不完全な可能性」と判定し、`GET /api/imports/:importId` のレスポンスに `warnings: [{ startTimeMs, endTimeMs, reason: 'low_speech_density' }]` として含める（保存はせず読み取り時に算出）。プレビュー画面では該当行に ⚠ を表示する。PoC では small/medium が冒頭27秒の音声を1文に圧縮したケースをこの判定で検出できた。
 
 ### 7.7 ジョブ実行（`transcriptionService.ts`）
 
@@ -803,6 +803,33 @@ C:\tools\whisper.cpp\bin\Release\whisper-cli.exe -m C:\tools\whisper.cpp\models\
 2. **既定モデルは `ggml-small.en`**。速度優先なら `ggml-base.en`、精度優先なら `ggml-medium.en` を `.env` で切り替える。
 3. 音声の前置き・無音は**モデルによって脱落/幻覚が起きる**ため、`[BLANK_AUDIO]` 等の除去と**低文字密度セグメントの警告**を実装に含める。
 4. whisper は**句読点・大文字・数値表記を正規化**する。教材としての可読性は上がるが、原文と表記が変わる点はプレビュー編集で吸収する。
+
+---
+
+## 18. 実装メモ（2026-11-22 / Phase 1 完了）
+
+設計からの差分と実装上の決定事項:
+
+- **`warnings` は保存しない:** `parsedJson` は従来どおり `ImportSegment[]` のまま。低文字密度の警告は `GET /api/imports/:importId` の読み取り時に算出して返す（既存ジョブとの互換を保つため）
+- **起動時の一時ファイル削除:** ジョブはインメモリ管理のため、起動時点で `AUDIO_TMP_DIR` に残っているファイルはすべて孤児として削除する（`cleanupStaleTempFiles(0)`）
+- **MIME 判定の緩和:** ツールによっては `application/octet-stream` で送られるため、その場合は拡張子で判定する（`.exe` などは引き続き拒否）
+- **`GET /api/imports/:importId` のレスポンス変更:** `rawText` / `parsedJson` を返さず、`segments` / `body` / `warnings` / `status` / `progress` / `durationMs` / `errorMessage` を返す（`id` と `importId` の両方を含む）
+- **教材へのメタデータ保存:** 音声由来の場合、`saveImportMaterial` が `Material.sourceMetadata` に `{ mediaFileName, durationMs, sttProvider }` を自動保存する
+- **YouTube（Phase 2）は未実装:** §6.2 / §7.9 は設計のみ。Phase 1 は音声ファイル単体で完結する
+- **npm 依存の追加なし:** `child_process` / `fetch` / 既存 `multer` のみで実装
+
+実装ファイル（Phase 1）:
+
+- backend: `services/transcriptionService.ts`, `services/stt/{types,index,whisperCppProvider,openAiCompatibleProvider}.ts`, `utils/{processRunner,audioConvert,audioUpload,whisperJson}.ts`, `prisma/migrations/20261122120000_add_import_job_transcription/`
+- backend tests: `whisperJson` / `audioUpload` / `processRunner` / `transcriptionService`（新規35件。既存24件と合わせて **59件すべて成功**）
+- frontend: `pages/ImportAudioPage.tsx(.module.css)`, `features/imports/useTranscriptionJob.ts`, `features/imports/api.ts`, `types/index.ts`, `app/router.tsx`, `pages/MaterialsPage.tsx`
+
+E2E 確認済み（実サーバー + 実 whisper.cpp）:
+
+1. 20.4秒の英語音声 → 4文のセグメント（タイムスタンプ付き）に変換、進捗 0→100、`durationMs=19640`
+2. 保存した教材にセグメント4件・タグ・`sourceMetadata` が入る
+3. 処理中にサーバーを強制停止 → 再起動時に「Removed 2 stale audio temp file(s)」「Marked 1 interrupted import job(s) as failed」、ジョブは `failed` に確定
+4. 一時ディレクトリにファイルが残らない
 
 ---
 

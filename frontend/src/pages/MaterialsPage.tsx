@@ -25,6 +25,7 @@ export default function MaterialsPage() {
         <h1 className={styles.title}>教材一覧</h1>
         <div className={styles.headerActions}>
           <Link to="/imports/pdf" className={styles.btnSecondary}>PDFから取り込む</Link>
+          <Link to="/imports/audio" className={styles.btnSecondary}>音声から取り込む</Link>
           <Link to="/imports/new" className={styles.btnSecondary}>字幕から取り込む</Link>
           <Link to="/materials/new" className={styles.btnPrimary}>+ 新規教材</Link>
         </div>

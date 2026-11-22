@@ -36,19 +36,24 @@ model MaterialSegment {
 }
 
 model ImportJob {
-  id           String    @id @default(cuid())
-  sourceType   String
-  sourceUrl    String?
-  title        String?
-  language     String
-  status       String
-  rawText      String?
-  parsedJson   String?
-  errorMessage String?
-  materialId   String?   @unique
-  material     Material? @relation(fields: [materialId], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  sourceType     String
+  sourceUrl      String?
+  title          String?
+  language       String
+  status         String
+  progress       Int       @default(0)
+  durationMs     Int?
+  mediaFileName  String?
+  mediaSizeBytes Int?
+  sttProvider    String?
+  rawText        String?
+  parsedJson     String?
+  errorMessage   String?
+  materialId     String?   @unique
+  material       Material? @relation(fields: [materialId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Attempt {

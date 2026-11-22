@@ -133,6 +133,24 @@ MVP 対象:
 - ユーザーが利用権限を持つ字幕・文字起こしのみを対象にする
 - YouTube、Udemy など外部サービスの規約に従う
 
+#### 音声からの教材作成（2026-11-22 追加）
+
+音声ファイルをサーバー側で文字起こしし、タイムスタンプ付きセグメントを持つ教材を作成します。ブラウザの `SpeechRecognition` はマイク入力専用のため、ファイル音声にはサーバー側 STT を使用します。
+
+- 対象形式: mp3 / m4a / aac / wav / ogg / opus / webm / flac（上限 100MB / 60分）
+- 文字起こし: `whisper.cpp`（既定・ローカル処理）または OpenAI 互換 STT API（`STT_PROVIDER` で切替）
+- 前処理: ffmpeg で 16kHz / モノラルの WAV に変換
+- セグメント: Whisper の句単位出力を文単位に統合（文末・240文字・12秒で区切る）
+- 品質ガード: 5秒超かつ4文字/秒未満の区間を「認識不完全の可能性」として警告
+- 処理は非同期ジョブ（`ImportJob.status = queued / processing / completed / failed`）とし、フロントは2秒間隔でポーリングする
+- 音声ファイルは `os.tmpdir()/dictationany-audio` に一時保存し、成功・失敗にかかわらず削除する。起動時に残骸も削除する
+- 同時実行は1本（実行中の開始要求は 429 `BUSY`）。サーバー再起動時は中断ジョブを `failed` に確定させる
+
+後続対象:
+
+- YouTube URL からの音声取得・字幕取得（同意チェック付き）
+- VAD（音声区間検出）の有効化、話者分離
+
 ### 5.3 音声読み上げ
 
 教材本文を Web Speech API で読み上げます。
@@ -421,9 +439,11 @@ DELETE /api/materials/:materialId
 #### 外部教材取り込み API
 
 ```text
-POST /api/imports/preview
-POST /api/imports/materials
-GET  /api/imports/:importId
+POST /api/imports/preview         字幕テキストのプレビュー
+POST /api/imports/pdf/preview     PDF のプレビュー（multipart）
+POST /api/imports/audio           音声ファイルの文字起こし開始（multipart、202 Accepted）
+POST /api/imports/materials       プレビュー結果を教材として保存
+GET  /api/imports/:importId       インポートジョブの状態・結果（音声は進捗も返す）
 ```
 
 #### 練習結果 API
@@ -796,6 +816,30 @@ Udemy 連携は、ログイン済みユーザーの受講権限やサービス�
 - ユーザーが利用権限を持つ教材のみ取り込む
 - 外部サービスの規約に反する自動取得は行わない
 
+### 11.6 音声取り込み（STT）
+
+音声ファイルを文字起こしして教材化します。処理は時間がかかるため `ImportJob` を非同期ジョブとして使用します。
+
+1. `POST /api/imports/audio` でファイルを受け取り、一時ディレクトリへ保存（diskStorage）
+2. `ImportJob` を `status=queued` で作成し、202 で `importId` を返す
+3. バックグラウンドで ffmpeg → STT → セグメント統合を実行し、進捗を 5% 刻みで `progress` に保存
+4. 完了時に `status=completed`、`rawText`（全文）、`parsedJson`（ImportSegment[]）、`durationMs` を保存
+5. 失敗時は `status=failed` と `errorMessage` を保存
+6. フロントは `GET /api/imports/:importId` を2秒間隔でポーリングし、完了後にプレビュー画面へ遷移
+
+保存する情報:
+
+- sourceType: `audio_file`
+- mediaFileName / mediaSizeBytes / durationMs / sttProvider
+- MaterialSegment: 文単位の開始時刻・終了時刻・本文
+- Material.sourceMetadata: `{ mediaFileName, durationMs, sttProvider }`
+
+方針:
+
+- 音声ファイル自体は保存しない（処理後に必ず削除、起動時にも残骸を削除）
+- 既定はローカル whisper.cpp（音声を外部送信しない）。OpenAI 互換 API は任意設定
+- 同時実行は1本。サーバー再起動時は中断ジョブを failed に確定
+
 ## 12. 比較アルゴリズム
 
 ### 12.1 正規化
@@ -876,12 +920,15 @@ score             = round(wordAccuracy * 0.7 + characterAccuracy * 0.3)
 
 ### Import
 
-- sourceType: 必須、youtube または udemy または subtitle_file
+- sourceType: 必須、youtube または udemy または subtitle_file または audio_file
 - sourceUrl: 任意、指定時は URL 形式
 - subtitleText: subtitleFile がない場合は必須
 - subtitleFile: subtitleText がない場合は必須
 - language: 必須、BCP 47 形式を推奨
 - title: 任意、未指定時は取り込み元情報から生成
+- audioFile（`POST /api/imports/audio`）: 必須。mp3 / m4a / aac / wav / ogg / opus / webm / flac、100MB 以下、60分以下
+  - MIME が `application/octet-stream` の場合は拡張子で判定する
+  - 音声が長すぎる場合は 413 `AUDIO_TOO_LONG`、処理中に開始した場合は 429 `BUSY`
 
 ### Attempt
 
@@ -927,6 +974,7 @@ Vite フロントエンド（:5173）と Express バックエンド（:3000）�
 
 - ユーザーが教材を登録できる
 - ユーザーが YouTube または Udemy 由来の字幕テキストを教材として取り込める
+- ユーザーが音声ファイルから教材を作成できる（文字起こし・プレビュー編集・保存）
 - 登録した教材を一覧から選択できる
 - 教材本文をブラウザで読み上げできる
 - ユーザーが聞き取った内容を入力できる

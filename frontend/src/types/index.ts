@@ -82,3 +82,43 @@ export interface CompareOptions {
 }
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
+export type ImportJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'preview';
+
+export type ImportWarningReason = 'low_speech_density';
+
+export interface ImportWarning {
+  startTimeMs?: number;
+  endTimeMs?: number;
+  reason: ImportWarningReason;
+}
+
+/** POST /api/imports/audio のレスポンス（202 Accepted） */
+export interface AudioImportResponse {
+  importId: string;
+  status: ImportJobStatus;
+  progress: number;
+  sourceType: string;
+  title: string;
+  language: string;
+}
+
+/** GET /api/imports/:importId のレスポンス */
+export interface ImportJobResponse {
+  id: string;
+  importId: string;
+  sourceType: string;
+  sourceUrl?: string | null;
+  title: string;
+  language: string;
+  status: ImportJobStatus;
+  progress: number;
+  durationMs?: number | null;
+  mediaFileName?: string | null;
+  errorMessage?: string | null;
+  segments: ImportSegment[];
+  body: string;
+  warnings: ImportWarning[];
+  createdAt: string;
+  updatedAt: string;
+}

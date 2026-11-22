@@ -6,6 +6,7 @@ import MaterialNewPage from '../pages/MaterialNewPage';
 import MaterialEditPage from '../pages/MaterialEditPage';
 import ImportNewPage from '../pages/ImportNewPage';
 import ImportPdfPage from '../pages/ImportPdfPage';
+import ImportAudioPage from '../pages/ImportAudioPage';
 import PracticePage from '../pages/PracticePage';
 import ResultPage from '../pages/ResultPage';
 import HistoryPage from '../pages/HistoryPage';
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: 'materials/:materialId/edit', element: <MaterialEditPage /> },
       { path: 'imports/new', element: <ImportNewPage /> },
       { path: 'imports/pdf', element: <ImportPdfPage /> },
+      { path: 'imports/audio', element: <ImportAudioPage /> },
       { path: 'practice/:materialId', element: <PracticePage /> },
       { path: 'results/:attemptId', element: <ResultPage /> },
       { path: 'history', element: <HistoryPage /> },

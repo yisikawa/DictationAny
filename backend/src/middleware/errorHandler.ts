@@ -10,10 +10,13 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   }
   if (err instanceof multer.MulterError) {
     const isSize = err.code === 'LIMIT_FILE_SIZE';
+    const audioMaxMb = process.env.AUDIO_MAX_MB ?? '100';
     res.status(isSize ? 413 : 400).json({
       error: {
         code: 'UPLOAD_ERROR',
-        message: isSize ? 'ファイルサイズが上限(20MB)を超えています。' : `アップロードエラー: ${err.message}`,
+        message: isSize
+          ? `ファイルサイズが上限を超えています（PDF: 20MB / 音声: ${audioMaxMb}MB）。`
+          : `アップロードエラー: ${err.message}`,
       },
     });
     return;

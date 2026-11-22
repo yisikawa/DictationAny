@@ -53,7 +53,6 @@ export default function ImportAudioPage() {
         setSegments(next.segments.map(segment => ({ ...segment })));
         setWarnings(next.warnings ?? []);
         setTitle(next.title || 'Imported');
-        setImportId(null);
         setStep('preview');
       },
       onFailed: (message) => {
@@ -125,7 +124,11 @@ export default function ImportAudioPage() {
   }
 
   async function handleSave() {
-    if (!importId || saving) return;
+    if (saving) return;
+    if (!importId) {
+      setError('取り込み情報が見つかりません。もう一度取り込んでください。');
+      return;
+    }
 
     const activeSegments = toSavableSegments(segments, applyFormatting);
 

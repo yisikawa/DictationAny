@@ -843,6 +843,7 @@ E2E 確認済み（実サーバー + 実 whisper.cpp）:
 - 音声パス: `-x --audio-format wav` で取得 → ffmpeg で 16kHz/mono → whisper.cpp → 文単位統合（進捗は 35〜99% にマッピング）
 - 一時ファイル: ジョブ専用ディレクトリ（`AUDIO_TMP_DIR/yt-*`）を作成し、成功・失敗時に再帰削除
 - フロント: `ImportAudioPage` のプレビュー部を `components/TranscriptEditor.tsx` に共通化し、新規 `ImportYoutubeAudioPage.tsx` から再利用
+- 保存に使う `importId` は**完了時にも保持**する（ポーリングは `step` の切り替えで停止する）。完了時に null にすると保存できなくなるため
 
 E2E（実サーバー + yt-dlp + whisper.cpp / `https://www.youtube.com/watch?v=jNQXAC9IVRw`）:
 

@@ -93,6 +93,6 @@ export function splitToSentences(text: string): string[] {
   const protected_ = text.replace(ABBREV_RE, `$1${PLACEHOLDER}`);
   return protected_
     .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim().replace(/\x01/g, '.'))
+    .map(s => s.trim().split(PLACEHOLDER).join('.'))
     .filter(Boolean);
 }

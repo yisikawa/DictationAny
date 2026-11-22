@@ -38,6 +38,13 @@ export interface AudioImportInput {
   title?: string;
 }
 
+export interface YoutubeAudioImportInput {
+  sourceUrl: string;
+  language: string;
+  preferSubtitles: boolean;
+  agreeToTerms: boolean;
+}
+
 export const importsApi = {
   preview: (data: ImportPreviewInput) =>
     api.post<ImportPreviewResponse>('/imports/preview', data),
@@ -58,6 +65,9 @@ export const importsApi = {
   },
   /** 文字起こしジョブの状態・結果を取得する */
   getJob: (importId: string) => api.get<ImportJobResponse>(`/imports/${importId}`),
+  /** YouTube URL からの取り込みを開始する（202 で importId が返る） */
+  youtubeAudioPreview: (data: YoutubeAudioImportInput) =>
+    api.post<AudioImportResponse>('/imports/youtube-audio', data),
   saveMaterial: (data: ImportSaveInput) =>
     api.post<Material>('/imports/materials', data),
 };

@@ -103,9 +103,13 @@ export function mergeSegmentsToSentences(
   }
   flush();
 
-  // 連続する完全同一テキスト（Whisper のループ hallucination）を除去する
+  return dedupeConsecutiveSegments(merged);
+}
+
+/** 連続する完全同一テキスト（Whisper/自動字幕の重複）を除去する */
+export function dedupeConsecutiveSegments(segments: ImportSegment[]): ImportSegment[] {
   const deduped: ImportSegment[] = [];
-  for (const segment of merged) {
+  for (const segment of segments) {
     const prev = deduped[deduped.length - 1];
     if (prev && prev.text.toLowerCase() === segment.text.toLowerCase()) continue;
     deduped.push(segment);

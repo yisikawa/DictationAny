@@ -806,7 +806,7 @@ C:\tools\whisper.cpp\bin\Release\whisper-cli.exe -m C:\tools\whisper.cpp\models\
 
 ---
 
-## 18. 実装メモ（2026-11-22 / Phase 1 完了）
+## 18. 実装メモ（2026-11-22 / Phase 1・2 完了）
 
 設計からの差分と実装上の決定事項:
 
@@ -830,6 +830,34 @@ E2E 確認済み（実サーバー + 実 whisper.cpp）:
 2. 保存した教材にセグメント4件・タグ・`sourceMetadata` が入る
 3. 処理中にサーバーを強制停止 → 再起動時に「Removed 2 stale audio temp file(s)」「Marked 1 interrupted import job(s) as failed」、ジョブは `failed` に確定
 4. 一時ディレクトリにファイルが残らない
+
+### 18.1 Phase 2（YouTube 取り込み）実装メモ
+
+設計からの差分と実装上の決定事項:
+
+- API: `POST /api/imports/youtube-audio`（JSON、202 Accepted）。`agreeToTerms: true` を必須にし、URL は YouTube ドメインの allowlist で検証（`javascript:` 等は拒否）
+- yt-dlp の字幕言語は `--sub-langs "en,en-orig"`。`en.*` 指定は自動翻訳言語を大量に要求して **HTTP 429** になったため、要求言語のみに限定した
+- タイトルは `--print "%(title)s"`（`--no-simulate` 併用）の標準出力から取得。`--skip-download` では info.json が生成されないため
+- `YTDLP_JS_RUNTIME="node"` を設定すると `--js-runtimes node` を付与する（未指定の既定は deno のみで、環境によっては警告が出る）
+- 字幕パス: VTT → `parseVtt` → `dedupeConsecutiveSegments` → completed（`sttProvider = 'youtube-subtitles'`）。STT は実行しない
+- 音声パス: `-x --audio-format wav` で取得 → ffmpeg で 16kHz/mono → whisper.cpp → 文単位統合（進捗は 35〜99% にマッピング）
+- 一時ファイル: ジョブ専用ディレクトリ（`AUDIO_TMP_DIR/yt-*`）を作成し、成功・失敗時に再帰削除
+- フロント: `ImportAudioPage` のプレビュー部を `components/TranscriptEditor.tsx` に共通化し、新規 `ImportYoutubeAudioPage.tsx` から再利用
+
+E2E（実サーバー + yt-dlp + whisper.cpp / `https://www.youtube.com/watch?v=jNQXAC9IVRw`）:
+
+1. 字幕パス: タイトル「Me at the zoo」、6セグメント、`durationMs=18881`、`sttProvider='youtube-subtitles'`
+2. 音声パス（`preferSubtitles:false`）: 4セグメント、`durationMs=19000`（19秒の音声を数秒で処理）
+3. 教材保存: `sourceType='youtube_audio'`、`sourceUrl` 保存、`sourceMetadata={ durationMs, sttProvider }`、セグメント数一致
+4. 処理後の一時ディレクトリは 0 件
+
+テスト: backend **74件（10ファイル）成功**。frontend は `tsc -b`・`eslint`・`vite build` 成功。
+
+既知の制約:
+
+- YouTube 側の仕様変更・レート制限・年齢制限などで失敗することがある（その場合は yt-dlp の ERROR 行を要約して画面に表示）
+- yt-dlp は更新が頻繁なため、失敗時は `python -m pip install -U yt-dlp` を案内する
+- 自動字幕は句読点が乏しく、文が細かく分割されることがある（プレビューで編集可能）
 
 ---
 

@@ -5,7 +5,8 @@ export function useAsyncResource<T>(load: () => Promise<T>, deps: unknown[]) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // 可変長 deps を意図的に受け取るフックのため、依存チェックを無効化する
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/use-memo
   const stableLoad = useCallback(load, deps);
 
   const mountedRef = useRef(true);
@@ -27,6 +28,8 @@ export function useAsyncResource<T>(load: () => Promise<T>, deps: unknown[]) {
     }
   }, [stableLoad]);
 
+  // 意図的に可変長 deps を渡しているため、effect 内の setState は許可する
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { run(); }, [run]);
 
   return { data, loading, error, reload: run };

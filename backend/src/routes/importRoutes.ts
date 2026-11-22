@@ -7,6 +7,7 @@ const router = Router();
 router.post('/preview', asyncHandler(ctrl.preview));
 router.post('/pdf/preview', ctrl.pdfUpload.single('file'), asyncHandler(ctrl.pdfPreview));
 router.post('/audio', ctrl.audioUpload.single('file'), asyncHandler(ctrl.startAudio));
+router.post('/youtube-audio', asyncHandler(ctrl.startYoutubeAudio));
 router.post('/materials', asyncHandler(ctrl.saveMaterial));
 router.get('/:importId', asyncHandler(ctrl.getOne));
 

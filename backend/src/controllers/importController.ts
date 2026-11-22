@@ -2,7 +2,8 @@ import type { Request, Response } from 'express';
 import path from 'path';
 import multer from 'multer';
 import * as service from '../services/importService';
-import { startAudioImport } from '../services/transcriptionService';
+import { startAudioImport, startYoutubeImport } from '../services/transcriptionService';
+import { parseYoutubeUrl } from '../services/youtubeService';
 import { extractPdfText, pdfTextToSegments } from '../utils/pdfExtract';
 import { audioUpload, cleanupTempFiles, decodeUploadFileName, getAudioMaxMb } from '../utils/audioUpload';
 import prisma from '../utils/prisma';
@@ -112,6 +113,53 @@ export async function startAudio(req: Request, res: Response) {
     await cleanupTempFiles([file.path]);
     throw err;
   }
+}
+
+export async function startYoutubeAudio(req: Request, res: Response) {
+  const { sourceUrl, language, preferSubtitles, agreeToTerms } = (req.body ?? {}) as {
+    sourceUrl?: string;
+    language?: string;
+    preferSubtitles?: boolean;
+    agreeToTerms?: boolean;
+  };
+
+  if (agreeToTerms !== true) {
+    res.status(400).json({
+      error: {
+        code: 'TERMS_NOT_AGREED',
+        message: '利用権限を有するコンテンツのみ取り込むことに同意してください。',
+      },
+    });
+    return;
+  }
+
+  if (typeof sourceUrl !== 'string' || !parseYoutubeUrl(sourceUrl)) {
+    res.status(400).json({
+      error: {
+        code: 'INVALID_YOUTUBE_URL',
+        message: 'YouTube の URL を指定してください。',
+      },
+    });
+    return;
+  }
+
+  if (!language) return validationError(res, 'language is required.');
+
+  const job = await startYoutubeImport({
+    sourceUrl,
+    language,
+    preferSubtitles: preferSubtitles !== false,
+  });
+
+  res.status(202).json({
+    importId: job.id,
+    status: job.status,
+    progress: job.progress,
+    sourceType: job.sourceType,
+    sourceUrl: job.sourceUrl,
+    title: job.title,
+    language: job.language,
+  });
 }
 
 export async function saveMaterial(req: Request, res: Response) {

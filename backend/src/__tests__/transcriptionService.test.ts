@@ -8,8 +8,13 @@ const mocks = vi.hoisted(() => ({
   convertToWav16kMono: vi.fn(),
   assertDurationLimit: vi.fn(),
   cleanupTempFiles: vi.fn(),
+  createTempDir: vi.fn(),
+  removeTempDir: vi.fn(),
   getSttProvider: vi.fn(),
   transcribe: vi.fn(),
+  parseYoutubeUrl: vi.fn(),
+  fetchYoutubeSubtitles: vi.fn(),
+  downloadYoutubeAudio: vi.fn(),
 }));
 
 vi.mock('../utils/prisma', () => ({
@@ -30,16 +35,25 @@ vi.mock('../utils/audioConvert', () => ({
 
 vi.mock('../utils/audioUpload', () => ({
   cleanupTempFiles: mocks.cleanupTempFiles,
+  createTempDir: mocks.createTempDir,
+  removeTempDir: mocks.removeTempDir,
 }));
 
 vi.mock('../services/stt', () => ({
   getSttProvider: mocks.getSttProvider,
 }));
 
+vi.mock('../services/youtubeService', () => ({
+  parseYoutubeUrl: mocks.parseYoutubeUrl,
+  fetchYoutubeSubtitles: mocks.fetchYoutubeSubtitles,
+  downloadYoutubeAudio: mocks.downloadYoutubeAudio,
+}));
+
 import {
   isTranscriptionBusy,
   recoverStaleJobs,
   startAudioImport,
+  startYoutubeImport,
   toIso6391,
 } from '../services/transcriptionService';
 
@@ -70,6 +84,15 @@ beforeEach(() => {
   mocks.convertToWav16kMono.mockResolvedValue('C:/tmp/dictationany/out.wav');
   mocks.assertDurationLimit.mockImplementation(() => {});
   mocks.cleanupTempFiles.mockResolvedValue(undefined);
+  mocks.createTempDir.mockResolvedValue('C:/tmp/dictationany/yt-job');
+  mocks.removeTempDir.mockResolvedValue(undefined);
+
+  mocks.parseYoutubeUrl.mockReturnValue({ videoId: 'jNQXAC9IVRw' });
+  mocks.fetchYoutubeSubtitles.mockResolvedValue({ title: 'Sample Video', vtt: null });
+  mocks.downloadYoutubeAudio.mockResolvedValue({
+    title: 'Sample Video',
+    filePath: 'C:/tmp/dictationany/yt-job/jNQXAC9IVRw.wav',
+  });
 
   mocks.getSttProvider.mockReturnValue({ name: 'whisper-cpp', transcribe: mocks.transcribe });
   mocks.transcribe.mockResolvedValue({
@@ -192,5 +215,103 @@ describe('recoverStaleJobs', () => {
         errorMessage: 'サーバ再起動により処理が中断されました。再度取り込んでください。',
       },
     });
+  });
+});
+
+describe('startYoutubeImport', () => {
+  const ytInput = {
+    sourceUrl: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
+    language: 'en-US',
+    preferSubtitles: true,
+  };
+
+  it('字幕が取得できたら STT を使わずに完了する', async () => {
+    mocks.fetchYoutubeSubtitles.mockResolvedValue({
+      title: 'Sample Video',
+      vtt: [
+        'WEBVTT',
+        '',
+        '00:00:01.000 --> 00:00:03.000',
+        'Hello world.',
+        '',
+        '00:00:03.000 --> 00:00:05.000',
+        'Hello world.',
+        '',
+        '00:00:05.000 --> 00:00:07.000',
+        'Second sentence.',
+      ].join('\n'),
+    });
+
+    await startYoutubeImport(ytInput);
+
+    await vi.waitFor(() => {
+      expect(mocks.update).toHaveBeenCalledWith({
+        where: { id: 'job-1' },
+        data: expect.objectContaining({
+          status: 'completed',
+          progress: 100,
+          sttProvider: 'youtube-subtitles',
+        }),
+      });
+    });
+
+    expect(mocks.transcribe).not.toHaveBeenCalled();
+    expect(mocks.downloadYoutubeAudio).not.toHaveBeenCalled();
+
+    const completed = mocks.update.mock.calls
+      .map(([arg]) => arg as { data: Record<string, unknown> })
+      .find(arg => arg.data.status === 'completed');
+    const segments = JSON.parse(completed!.data.parsedJson as string);
+    expect(segments).toHaveLength(2);
+    expect(segments[0]).toEqual({ startTimeMs: 1000, endTimeMs: 3000, text: 'Hello world.' });
+    expect(completed!.data.durationMs).toBe(7000);
+    expect(mocks.removeTempDir).toHaveBeenCalledWith('C:/tmp/dictationany/yt-job');
+    await waitForIdle();
+  });
+
+  it('字幕が無ければ音声をダウンロードして STT にフォールバックする', async () => {
+    await startYoutubeImport(ytInput);
+
+    await vi.waitFor(() => {
+      expect(mocks.update).toHaveBeenCalledWith({
+        where: { id: 'job-1' },
+        data: expect.objectContaining({ status: 'completed' }),
+      });
+    });
+
+    expect(mocks.downloadYoutubeAudio).toHaveBeenCalled();
+    expect(mocks.transcribe).toHaveBeenCalledWith(
+      'C:/tmp/dictationany/out.wav',
+      expect.objectContaining({ language: 'en' }),
+    );
+    await waitForIdle();
+  });
+
+  it('preferSubtitles=false なら字幕取得をスキップする', async () => {
+    await startYoutubeImport({ ...ytInput, preferSubtitles: false });
+
+    await vi.waitFor(() => expect(mocks.downloadYoutubeAudio).toHaveBeenCalled());
+    expect(mocks.fetchYoutubeSubtitles).not.toHaveBeenCalled();
+    await waitForIdle();
+  });
+
+  it('失敗時は failed と理由を保存し、作業ディレクトリを消す', async () => {
+    mocks.downloadYoutubeAudio.mockRejectedValue(
+      new Error('YouTube から取得できませんでした。 Video unavailable'),
+    );
+
+    await startYoutubeImport({ ...ytInput, preferSubtitles: false });
+
+    await vi.waitFor(() => {
+      expect(mocks.update).toHaveBeenCalledWith({
+        where: { id: 'job-1' },
+        data: {
+          status: 'failed',
+          errorMessage: 'YouTube から取得できませんでした。 Video unavailable',
+        },
+      });
+    });
+    expect(mocks.removeTempDir).toHaveBeenCalled();
+    await waitForIdle();
   });
 });

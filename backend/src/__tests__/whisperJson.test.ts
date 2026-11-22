@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  dedupeConsecutiveSegments,
   detectLowDensitySegments,
   mergeSegmentsToSentences,
   stripNonSpeechTags,
@@ -123,5 +124,18 @@ describe('detectLowDensitySegments', () => {
     expect(detectLowDensitySegments([
       { startTimeMs: 0, endTimeMs: 1000, text: 'Hi.' },
     ])).toEqual([]);
+  });
+});
+
+
+describe('dedupeConsecutiveSegments', () => {
+  it('連続する同一字幕を1つにまとめる', () => {
+    const deduped = dedupeConsecutiveSegments([
+      { startTimeMs: 0, endTimeMs: 1000, text: 'Hello world.' },
+      { startTimeMs: 1000, endTimeMs: 2000, text: 'hello world.' },
+      { startTimeMs: 2000, endTimeMs: 3000, text: 'Second.' },
+    ]);
+    expect(deduped).toHaveLength(2);
+    expect(deduped[0].text).toBe('Hello world.');
   });
 });

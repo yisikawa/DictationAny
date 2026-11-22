@@ -93,13 +93,14 @@ export interface ImportWarning {
   reason: ImportWarningReason;
 }
 
-/** POST /api/imports/audio のレスポンス（202 Accepted） */
+/** POST /api/imports/audio, /api/imports/youtube-audio のレスポンス（202 Accepted） */
 export interface AudioImportResponse {
   importId: string;
   status: ImportJobStatus;
   progress: number;
   sourceType: string;
-  title: string;
+  sourceUrl?: string | null;
+  title: string | null;
   language: string;
 }
 

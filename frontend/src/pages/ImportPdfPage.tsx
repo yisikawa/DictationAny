@@ -68,9 +68,14 @@ export default function ImportPdfPage() {
     if (!preview) return;
     setLoading(true);
     setError(null);
-    const activeSegments = editedSegments
+    const activeSegments: ImportSegment[] = editedSegments
       .filter(s => !s.deleted && s.text.trim().length > 0)
-      .map(({ deleted: _deleted, ...s }) => s);
+      .map((s) => {
+        const item: ImportSegment = { text: s.text };
+        if (s.startTimeMs !== undefined) item.startTimeMs = s.startTimeMs;
+        if (s.endTimeMs !== undefined) item.endTimeMs = s.endTimeMs;
+        return item;
+      });
     try {
       await importsApi.saveMaterial({
         importId: preview.importId,

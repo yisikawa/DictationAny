@@ -9,6 +9,7 @@
 - **教材管理** — テキストを直接入力して教材を登録・編集・削除
 - **字幕取り込み** — YouTube / Udemy などの SRT / WebVTT 字幕から教材を作成
 - **音声取り込み** — 音声ファイル（mp3 / m4a / wav など）を whisper.cpp で文字起こしして教材を作成
+- **YouTube取り込み** — YouTube URL から字幕を取得、無ければ音声を文字起こしして教材を作成（yt-dlp）
 - **音声読み上げ** — ブラウザの Web Speech API で教材本文を読み上げ（速度調整・文単位再生対応）
 - **ディクテーション** — 聞き取った内容をテキスト入力、またはマイクで音声入力して提出
 - **採点・差分表示** — 単語単位の差分ハイライト、スコア・一致率・聞き落とし単語を表示
@@ -98,6 +99,27 @@ FFMPEG_PATH="ffmpeg"
 | `ggml-medium.en.bin` | 1.46GB | 193秒 | 97% |
 
 日本語など他言語を扱う場合は、多言語モデル（例: `ggml-small.bin`）を指定してください。
+
+---
+
+### yt-dlp のセットアップ（YouTube取り込み機能）
+
+YouTube の字幕・音声の取得には **yt-dlp** と **ffmpeg** を使用します。
+
+```bash
+# yt-dlp（Python の pip で導入する例）
+python -m pip install -U yt-dlp
+```
+
+`backend/.env` の設定（既定のままで PATH が通っていれば変更不要）:
+
+```dotenv
+YTDLP_PATH="yt-dlp"
+YTDLP_TIMEOUT_MS="300000"
+YTDLP_JS_RUNTIME="node"
+```
+
+> **ヒント:** `YTDLP_JS_RUNTIME="node"` を設定すると、yt-dlp が Node.js を JavaScript ランタイムとして使います（未指定時は deno のみ有効）。yt-dlp は更新が頻繁なため、取得に失敗する場合は `python -m pip install -U yt-dlp` で更新してください。
 
 ---
 
@@ -222,6 +244,17 @@ npm run dev
 
 > **ヒント:** 認識が不完全な可能性がある区間には ⚠ が表示されます。また「英文を整形する」をオンにすると、大文字・句読点・単語間スペースが補正されます。音声ファイルは処理後にサーバーから自動削除されます。
 
+**YouTubeから取り込む場合**
+
+1. 「教材」→「YouTubeから取り込む」をクリック
+2. YouTube の URL（`https://www.youtube.com/watch?v=...` または `https://youtu.be/...`）を入力
+3. 言語と「字幕があれば字幕から取り込む」を選択
+4. 「利用権限を有するコンテンツのみ取り込む」にチェックして「取り込み開始」
+5. 進捗が 100% になるまで待つ（字幕があれば数秒、無ければ音声の長さに応じて数分）
+6. 文字起こし結果を確認・修正して「教材として保存」
+
+> **注意:** 取り込めるのは利用権限を有するコンテンツに限ります。YouTube の利用規約に従ってご利用ください。ダウンロードした音声は処理後に自動削除されます。
+
 ---
 
 ### 2. 練習する
@@ -318,5 +351,6 @@ DictationAny/
 | 音声読み上げ | Web Speech API (SpeechSynthesis) |
 | 音声入力 | Web Speech API (SpeechRecognition) — Chrome / Edge / iOS Safari |
 | 音声認識（音声取り込み） | whisper.cpp（ローカル） / OpenAI 互換 STT API |
+| YouTube取り込み | yt-dlp（字幕優先 → 音声は whisper.cpp で文字起こし） |
 | 比較アルゴリズム | LCS diff + Levenshtein 距離 |
 | AI OCR 修正 | Ollama (`llama3.1:latest`) — OpenAI 互換 API |

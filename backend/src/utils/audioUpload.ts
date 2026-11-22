@@ -63,6 +63,27 @@ export function decodeUploadFileName(name: string): string {
   }
 }
 
+/** 処理ごとの作業ディレクトリを作る（yt-dlp など複数ファイルを吐く処理用） */
+export async function createTempDir(prefix: string): Promise<string> {
+  ensureAudioTmpDir();
+  const dir = path.join(
+    AUDIO_TMP_DIR,
+    `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+  );
+  await fs.promises.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+/** 作業ディレクトリごと削除する */
+export async function removeTempDir(dir: string | undefined | null): Promise<void> {
+  if (!dir) return;
+  try {
+    await fs.promises.rm(dir, { recursive: true, force: true });
+  } catch {
+    // 既に削除済みなどは無視する
+  }
+}
+
 /** 指定ファイルを削除する（存在しない場合や失敗は無視） */
 export async function cleanupTempFiles(paths: (string | undefined | null)[]): Promise<void> {
   await Promise.all(

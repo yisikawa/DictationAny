@@ -122,7 +122,6 @@ MVP 対象:
 
 後続対象:
 
-- YouTube URL からの字幕候補取得
 - Udemy 講座・レクチャー単位の字幕取り込み
 - チャプター単位の教材分割
 - 元動画の該当時刻へのリンク
@@ -148,8 +147,19 @@ MVP 対象:
 
 後続対象:
 
-- YouTube URL からの音声取得・字幕取得（同意チェック付き）
 - VAD（音声区間検出）の有効化、話者分離
+
+#### YouTube URL からの取り込み（2026-11-22 追加）
+
+YouTube の URL を指定して教材を作成します。**字幕を優先**し、字幕が無い場合のみ音声をダウンロードして文字起こしします。
+
+- 取得: `yt-dlp`（`--write-subs --write-auto-subs` で VTT を取得。無ければ `-x --audio-format wav`）
+- 対象 URL: `youtube.com` / `www.youtube.com` / `m.youtube.com` / `music.youtube.com` / `youtu.be` の allowlist のみ（`javascript:` 等は拒否）
+- 字幕がある場合は `sttProvider = youtube-subtitles` として保存し、STT は実行しない
+- 同意: UI で「利用権限を有するコンテンツのみ取り込む」チェックを必須とし、API でも `agreeToTerms: true` を要求
+- 音声・字幕ファイルは処理後に必ず削除する（作業ディレクトリごと削除）
+- `preferSubtitles: false` を指定すると字幕をスキップして常に音声から文字起こしする
+- yt-dlp の JavaScript ランタイムとして Node.js を使う場合は `YTDLP_JS_RUNTIME="node"` を設定する
 
 ### 5.3 音声読み上げ
 
@@ -442,6 +452,7 @@ DELETE /api/materials/:materialId
 POST /api/imports/preview         字幕テキストのプレビュー
 POST /api/imports/pdf/preview     PDF のプレビュー（multipart）
 POST /api/imports/audio           音声ファイルの文字起こし開始（multipart、202 Accepted）
+POST /api/imports/youtube-audio   YouTube URL からの取り込み開始（JSON、202 Accepted）
 POST /api/imports/materials       プレビュー結果を教材として保存
 GET  /api/imports/:importId       インポートジョブの状態・結果（音声は進捗も返す）
 ```
@@ -840,6 +851,27 @@ Udemy 連携は、ログイン済みユーザーの受講権限やサービス�
 - 既定はローカル whisper.cpp（音声を外部送信しない）。OpenAI 互換 API は任意設定
 - 同時実行は1本。サーバー再起動時は中断ジョブを failed に確定
 
+### 11.7 YouTube 取り込み（実装済み）
+
+`POST /api/imports/youtube-audio` で `{ sourceUrl, language, preferSubtitles, agreeToTerms }` を受け取り、`ImportJob`（`sourceType = youtube_audio`）を作成して 202 を返します。以降は音声取り込みと同じ非同期ジョブ＋ポーリングで進みます。
+
+1. URL を allowlist（YouTube ドメインのみ）で検証
+2. `preferSubtitles` が true の場合、yt-dlp で VTT 字幕を取得（`--sub-langs en,en-orig`）
+   - 取得できた場合: `parseVtt` → 連続重複を除去 → `ImportJob` を completed（`sttProvider = youtube-subtitles`）
+3. 字幕が無い / `preferSubtitles` が false の場合
+   - `yt-dlp -x --audio-format wav` で音声を取得 → ffmpeg で 16kHz/mono → whisper.cpp で文字起こし
+4. タイトルは `yt-dlp --print %(title)s` の出力から取得
+5. 作業ディレクトリ（字幕・音声・中間ファイル）は成功・失敗にかかわらず削除
+
+エラー:
+
+- 同意なし: 400 `TERMS_NOT_AGREED`
+- URL 不正: 400 `INVALID_YOUTUBE_URL`
+- yt-dlp 不在: 503 `YTDLP_UNAVAILABLE`
+- 取得失敗（非公開・年齢制限・レート制限など）: 422 `YOUTUBE_FETCH_FAILED`（yt-dlp の ERROR 行を要約して返す）
+- タイムアウト: 504 `YTDLP_TIMEOUT`
+- 実行中に別ジョブ開始: 429 `BUSY`
+
 ## 12. 比較アルゴリズム
 
 ### 12.1 正規化
@@ -929,6 +961,9 @@ score             = round(wordAccuracy * 0.7 + characterAccuracy * 0.3)
 - audioFile（`POST /api/imports/audio`）: 必須。mp3 / m4a / aac / wav / ogg / opus / webm / flac、100MB 以下、60分以下
   - MIME が `application/octet-stream` の場合は拡張子で判定する
   - 音声が長すぎる場合は 413 `AUDIO_TOO_LONG`、処理中に開始した場合は 429 `BUSY`
+- sourceUrl（`POST /api/imports/youtube-audio`）: 必須。YouTube の URL（watch / shorts / embed / youtu.be）
+- agreeToTerms: 必須（`true` 以外は 400 `TERMS_NOT_AGREED`）
+- preferSubtitles: 任意（既定 `true`）
 
 ### Attempt
 
@@ -975,6 +1010,7 @@ Vite フロントエンド（:5173）と Express バックエンド（:3000）�
 - ユーザーが教材を登録できる
 - ユーザーが YouTube または Udemy 由来の字幕テキストを教材として取り込める
 - ユーザーが音声ファイルから教材を作成できる（文字起こし・プレビュー編集・保存）
+- ユーザーが YouTube URL から教材を作成できる（字幕優先、無ければ音声を文字起こし）
 - 登録した教材を一覧から選択できる
 - 教材本文をブラウザで読み上げできる
 - ユーザーが聞き取った内容を入力できる

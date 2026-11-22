@@ -16,6 +16,10 @@ import {
   mergeSegmentsToSentences,
 } from '../utils/whisperJson';
 import { parseVtt, segmentsToBody } from '../utils/subtitleParser';
+import {
+  dedupeRollingCaptionSegments,
+  isRollingCaptionVtt,
+} from '../utils/rollingCaptions';
 import { getSttProvider } from './stt';
 import {
   downloadYoutubeAudio,
@@ -248,7 +252,11 @@ async function runYoutubeImport(
       if (subtitles.title) await updateJob(jobId, { title: subtitles.title });
 
       if (subtitles.vtt) {
-        const segments = dedupeConsecutiveSegments(parseVtt(subtitles.vtt));
+        const cues = parseVtt(subtitles.vtt);
+        const normalized = isRollingCaptionVtt(subtitles.vtt, cues)
+          ? dedupeRollingCaptionSegments(cues)
+          : dedupeConsecutiveSegments(cues);
+        const segments = mergeSegmentsToSentences(normalized);
         if (segments.length > 0) {
           await updateJob(jobId, {
             status: 'completed',

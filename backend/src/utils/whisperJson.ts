@@ -45,6 +45,13 @@ function isSentenceEnd(text: string): boolean {
   return /[.!?]["')\]]?$/.test(text.trim());
 }
 
+/** テキストを文単位に分割する（文末記号を含めて返す） */
+export function splitIntoSentences(text: string): string[] {
+  const matches = text.match(/[^.!?]+[.!?]+["')\]]?|[^.!?]+$/g);
+  if (!matches) return text.trim() ? [text.trim()] : [];
+  return matches.map(part => part.trim()).filter(Boolean);
+}
+
 /**
  * Whisper の句単位セグメントを文単位にまとめる。
  * 文末（. ! ?）・最大文字数・最大長のいずれかで区切る。
@@ -81,24 +88,42 @@ export function mergeSegmentsToSentences(
     const text = stripNonSpeechTags(segment.text ?? '');
     if (!text) continue;
 
-    buffer = buffer ? `${buffer} ${text}` : text;
-    if (startTimeMs === undefined && segment.startTimeMs !== undefined) {
-      startTimeMs = segment.startTimeMs;
-    }
-    if (segment.endTimeMs !== undefined) {
-      endTimeMs = segment.endTimeMs;
-    }
+    const pieces = splitIntoSentences(text);
+    const totalLength = pieces.reduce((sum, piece) => sum + piece.length, 0) || 1;
+    let consumed = 0;
 
-    const durationMs = startTimeMs !== undefined && endTimeMs !== undefined
-      ? endTimeMs - startTimeMs
-      : 0;
+    for (const piece of pieces) {
+      // 1キューに複数文が入る場合は、文字数比でキュー内の時間を配分する
+      const ratioStart = consumed / totalLength;
+      const ratioEnd = (consumed + piece.length) / totalLength;
+      consumed += piece.length;
 
-    if (
-      isSentenceEnd(buffer)
-      || buffer.length >= maxChars
-      || (maxDurationMs > 0 && durationMs >= maxDurationMs)
-    ) {
-      flush();
+      const pieceStart = segment.startTimeMs !== undefined && segment.endTimeMs !== undefined
+        ? Math.round(segment.startTimeMs + (segment.endTimeMs - segment.startTimeMs) * ratioStart)
+        : segment.startTimeMs;
+      const pieceEnd = segment.startTimeMs !== undefined && segment.endTimeMs !== undefined
+        ? Math.round(segment.startTimeMs + (segment.endTimeMs - segment.startTimeMs) * ratioEnd)
+        : segment.endTimeMs;
+
+      buffer = buffer ? `${buffer} ${piece}` : piece;
+      if (startTimeMs === undefined && pieceStart !== undefined) {
+        startTimeMs = pieceStart;
+      }
+      if (pieceEnd !== undefined) {
+        endTimeMs = pieceEnd;
+      }
+
+      const durationMs = startTimeMs !== undefined && endTimeMs !== undefined
+        ? endTimeMs - startTimeMs
+        : 0;
+
+      if (
+        isSentenceEnd(buffer)
+        || buffer.length >= maxChars
+        || (maxDurationMs > 0 && durationMs >= maxDurationMs)
+      ) {
+        flush();
+      }
     }
   }
   flush();

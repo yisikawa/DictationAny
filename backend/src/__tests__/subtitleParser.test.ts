@@ -11,6 +11,13 @@ describe('parseSrt', () => {
     expect(segs[0].endTimeMs).toBe(4000);
   });
 
+  it('キュー設定付き（YouTube自動字幕）の時刻をパースする', () => {
+    const srt = `1\n00:00:01.000 --> 00:00:04.500 align:start position:0%\nHello world`;
+    const segs = parseSrt(srt);
+    expect(segs[0].startTimeMs).toBe(1000);
+    expect(segs[0].endTimeMs).toBe(4500);
+  });
+
   it('タグを除去する', () => {
     const srt = `1\n00:00:01,000 --> 00:00:04,000\n<i>Hello</i> world`;
     const segs = parseSrt(srt);

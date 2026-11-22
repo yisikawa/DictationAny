@@ -1,16 +1,16 @@
 import type { ImportSegment } from '../types';
 
 function parseTimestamp(ts: string): number {
-  const parts = ts.trim().replace(',', '.').split(':');
-  if (parts.length === 3) {
-    const [h, m, s] = parts;
-    return (parseInt(h, 10) * 3600 + parseInt(m, 10) * 60 + parseFloat(s)) * 1000;
-  }
-  if (parts.length === 2) {
-    const [m, s] = parts;
-    return (parseInt(m, 10) * 60 + parseFloat(s)) * 1000;
-  }
-  return 0;
+  // 例: "00:00:01,000" / "1:02:03.500" / "00:00:01.000 align:start position:0%"
+  const match = /(?:(\d+):)?(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?/.exec(ts.trim());
+  if (!match) return 0;
+
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const minutes = parseInt(match[2], 10);
+  const seconds = parseInt(match[3], 10);
+  const millis = match[4] ? parseInt(match[4].padEnd(3, '0'), 10) : 0;
+
+  return ((hours * 3600 + minutes * 60 + seconds) * 1000) + millis;
 }
 
 export function parseSrt(text: string): ImportSegment[] {

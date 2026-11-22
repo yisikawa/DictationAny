@@ -154,6 +154,9 @@ MVP 対象:
 YouTube の URL を指定して教材を作成します。**字幕を優先**し、字幕が無い場合のみ音声をダウンロードして文字起こしします。
 
 - 取得: `yt-dlp`（`--write-subs --write-auto-subs` で VTT を取得。無ければ `-x --audio-format wav`）
+- 自動字幕（ローリング形式）は「直前フレーズを含むキュー」と「数十msの重複キュー」で構成されるため、検出して**増分テキストのみ**に正規化する（重複行の除去）
+- VTT のキュー設定（例: `align:start position:0%`）を考慮して時刻を解析する
+- 1キューに複数文が含まれる場合は、文字数比でキュー内の時間を配分する
 - 対象 URL: `youtube.com` / `www.youtube.com` / `m.youtube.com` / `music.youtube.com` / `youtu.be` の allowlist のみ（`javascript:` 等は拒否）
 - 字幕がある場合は `sttProvider = youtube-subtitles` として保存し、STT は実行しない
 - 同意: UI で「利用権限を有するコンテンツのみ取り込む」チェックを必須とし、API でも `agreeToTerms: true` を要求
